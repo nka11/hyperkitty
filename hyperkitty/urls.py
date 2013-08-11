@@ -68,8 +68,7 @@ urlpatterns = patterns('hyperkitty.views',
         'message.index', name='message_index'),
     url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/attachment/(?P<counter>\d+)/(?P<filename>.+)$',
         'message.attachment', name='message_attachment'),
-    url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/vote$',
-        'message.vote', name='message_vote'),
+    
     url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/reply$',
         'message.reply', name='message_reply'),
     url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/new$',
@@ -135,5 +134,10 @@ urlpatterns = patterns('hyperkitty.views',
 
 )
 #) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+from hyperkitty.lib.plugins import pluginRegistry
+
+urlpatterns += pluginRegistry.get_urls()
+
 urlpatterns += staticfiles_urlpatterns()
 
