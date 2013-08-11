@@ -25,7 +25,7 @@ class PluginRegistry():
     pluginsClass = {}
     urls = None
     message_index_hooks = []
-    
+    templates_dirs = []
     def __init__(self):
         self.urls = patterns('',url(r'plugins/','hyperkitty.lib.plugins.plugins_list'))
     def plugins_list(self):
@@ -42,6 +42,8 @@ class PluginRegistry():
         for pluginClass in self.pluginsClass.keys():
             # instanciate every registered plugin
             self.plugins[pluginClass] = self.pluginsClass[pluginClass]()
+            if 'templates' in self.plugins[pluginClass].__dict__.keys():
+                self.templates_dirs.append(self.plugins[pluginClass].templates)
             if 'urls' in self.plugins[pluginClass].__dict__.keys():
                 if self.urls != None:
                    self.urls += self.plugins[pluginClass].urls

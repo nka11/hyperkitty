@@ -8,7 +8,8 @@ from django.http import HttpResponse, Http404
 #XXX move Rating in Plugin
 from hyperkitty.models import Rating
 from hyperkitty.lib.plugins import IPlugin
-
+import os
+templatesdir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
 def message_vote(request, mlist_fqdn, message_id_hash):
     """ Add a rating to a given message identified by messageid. HTTP POST Handler """
     if request.method != 'POST':
@@ -66,6 +67,7 @@ class VotePlugin(IPlugin):
     def message_index(request,context):
         set_message_votes(context.message, request.user)
     def __init__(self):
+        self.templates = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
         self.urls = patterns('',
             url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/vote$',
             'hyperkitty.plugins.vote.message_vote', name='message_vote'))
