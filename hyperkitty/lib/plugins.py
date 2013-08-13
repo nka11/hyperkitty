@@ -19,6 +19,7 @@
 # Author: Nicolas Karageuzian <nicolas@karageuzian.com>
 #
 from django.conf.urls import patterns, include, url
+from django.conf import settings
 
 class PluginRegistry():
     plugins = {}
@@ -58,7 +59,6 @@ class PluginRegistry():
             if plugin.message_index :
                 plugin.message_index(request,message)
             if context != None and "message_templates" in plugin.__dict__ and pluginName + "_message_index_templates" not in request.__dict__:
-                print 'Adding message_index templates for ' + pluginName
                 request.__dict__[pluginName + "_message_index_templates"] = True
                 context['plugins_templates'].extend(plugin.message_templates)
 def plugins_list():
@@ -90,7 +90,10 @@ class IPlugin():
 
 # Load external plugins - raw hack for instance
 #XXX Conf driven loading
-import hyperkitty.plugins.vote
+# import hyperkitty.plugins.vote
+
+for pluginName in settings.HYPERKITTY_PLUGINS:
+    __import__(pluginName)
 
 pluginRegistry.init_plugins()
 

@@ -194,7 +194,7 @@ def last_views(request):
 @login_required
 def votes(request):
     store = get_store(request)
-    # Votes
+    # XXX pull out Votes from here
     try:
         votes = Rating.objects.filter(user=request.user)
     except Rating.DoesNotExist:
@@ -236,6 +236,7 @@ def public_profile(request, user_id):
             continue
         email_hashes = store.get_message_hashes_by_user_id(user_id, mlist)
         try: # Compute the average vote value
+        #XXX pull out votes from here
             votes = Rating.objects.filter(list_address=mlist,
                                           messageid__in=email_hashes)
         except Rating.DoesNotExist:
