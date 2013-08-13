@@ -39,10 +39,11 @@ from hyperkitty.views.forms import AddTagForm, ReplyForm, CategoryForm
 from hyperkitty.lib import get_store, stripped_subject
 from hyperkitty.lib.view_helpers import (get_months, get_category_widget,
         FLASH_MESSAGES)
+from hyperkitty.lib.plugins import pluginRegistry
 from hyperkitty.lib.voting import set_message_votes
 
 
-def _get_thread_replies(request, thread, offset=1, limit=None):
+def _get_thread_replies(request, thread, context, offset=1, limit=None):
     '''
     Get and sort the replies for a thread.
     By default, offset = 1 to skip the original message.
@@ -64,7 +65,8 @@ def _get_thread_replies(request, thread, offset=1, limit=None):
     emails = list(emails)
     for email in emails:
         # Extract all the votes for this message
-        set_message_votes(email, request.user)
+        pluginRegistry.message_index(request,email,context)
+        #set_message_votes(email, request.user)
         if sort_mode == "thread":
             email.level = email.thread_depth - 1 # replies start ragged left
             if email.level > 5:
@@ -82,7 +84,7 @@ def thread_index(request, mlist_fqdn, threadid, month=None, year=None):
     prev_thread, next_thread = store.get_thread_neighbors(mlist_fqdn, threadid)
 
     sort_mode = request.GET.get("sort", "thread")
-    set_message_votes(thread.starting_email, request.user)
+#    set_message_votes(thread.starting_email, request.user)
 
     # Tags
     tag_form = AddTagForm()
@@ -153,7 +155,6 @@ def thread_index(request, mlist_fqdn, threadid, month=None, year=None):
         'tags': tags,
         'addtag_form': tag_form,
         'month': thread.date_active,
-        'first_mail': thread.starting_email,
         'neighbors': (prev_thread, next_thread),
         'months_list': get_months(store, mlist.name),
         'days_inactive': days_inactive.days,
@@ -170,12 +171,13 @@ def thread_index(request, mlist_fqdn, threadid, month=None, year=None):
         'category': category,
         'flash_messages': flash_messages,
     }
+    pluginRegistry.message_index(request,thread.starting_email,context)
+    context['first_mail'] = thread.starting_email
     context["participants"].sort(key=lambda x: x[0].lower())
-
     if is_bot:
         # Don't rely on AJAX to load the replies
         # The limit is a safety measure, don't let a bot kill the DB
-        context["replies"] = _get_thread_replies(request, thread, limit=1000)
+        context["replies"] = _get_thread_replies(request, thread, context, limit=1000)
 
     return render(request, "thread.html", context)
 
@@ -200,7 +202,7 @@ def replies(request, mlist_fqdn, threadid):
         'reply_form': ReplyForm(),
         'last_view': last_view,
     }
-    context["replies"] = _get_thread_replies(request, thread, offset=offset,
+    context["replies"] = _get_thread_replies(request, thread, context, offset=offset,
                                              limit=chunk_size)
 
     replies_tpl = loader.get_template('ajax/replies.html')

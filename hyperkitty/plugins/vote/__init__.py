@@ -63,12 +63,17 @@ def message_vote(request, mlist_fqdn, message_id_hash):
                "html": html, }
     return HttpResponse(json.dumps(result),
                         mimetype='application/javascript')
+
+
 class VotePlugin(IPlugin):
-    def message_index(request,context):
-        set_message_votes(context.message, request.user)
     def __init__(self):
         self.templates = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
+        self.message_templates = ["messages/like_form.html"]
         self.urls = patterns('',
             url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/vote$',
             'hyperkitty.plugins.vote.message_vote', name='message_vote'))
+    def message_index(self,request,message):
+        set_message_votes(message, request.user)
+
+
 

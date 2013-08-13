@@ -35,7 +35,9 @@
             <div class="thread-info">
                 <div class="tags">
                 </div>
-                {% include "messages/like_form.html" with message_id_hash=message.message_id_hash object=message %}
+                {% for plugin_template in plugins_templates %}
+            {% include plugin_template with mlist_fqdn=mlist.name  message_id_hash=message.message_id_hash object=message %}
+                {% endfor %}
                 <a href="{% url 'message_index' message_id_hash=message.message_id_hash mlist_fqdn=message.list_name %}"
                    class="btn thread-show">Show message</a>
             </div>

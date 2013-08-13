@@ -35,7 +35,7 @@ from hyperkitty.lib import get_store
 from hyperkitty.lib.view_helpers import get_months
 from hyperkitty.lib.posting import post_to_list, PostingFailed
 from forms import ReplyForm, PostForm
-#from hyperkitty.lib.plugins import pluginRegistry
+from hyperkitty.lib.plugins import pluginRegistry
 
 def index(request, mlist_fqdn, message_id_hash):
     '''
@@ -57,7 +57,7 @@ def index(request, mlist_fqdn, message_id_hash):
         'months_list': get_months(store, mlist.name),
         'reply_form': ReplyForm(),
     }
-    #pluginRegistry.message_index(request,context)
+    pluginRegistry.message_index(request,message,context)
     return render(request, "message.html", context)
 
 

@@ -50,10 +50,17 @@ class PluginRegistry():
                 else:
                     self.urls = self.plugins[pluginClass].urls
             
-    def message_index(self,request,mlist,message):
-        for plugin in plugins:
-            if "message_index" in plugin.__dict__:
-                plugin.message_index(request,mlist,message)
+    def message_index(self,request,message,context=None):
+        if context != None and 'plugins_templates' not in context:
+            context['plugins_templates'] = []
+        for pluginName in self.plugins.keys():
+            plugin = self.plugins[pluginName]
+            if plugin.message_index :
+                plugin.message_index(request,message)
+            if context != None and "message_templates" in plugin.__dict__ and pluginName + "_message_index_templates" not in request.__dict__:
+                print 'Adding message_index templates for ' + pluginName
+                request.__dict__[pluginName + "_message_index_templates"] = True
+                context['plugins_templates'].extend(plugin.message_templates)
 def plugins_list():
     pass
 
