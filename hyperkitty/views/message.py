@@ -57,7 +57,7 @@ def index(request, mlist_fqdn, message_id_hash):
         'months_list': get_months(store, mlist.name),
         'reply_form': ReplyForm(),
     }
-    pluginRegistry.message_index(request,message,context)
+    pluginRegistry.message_view(request,message,context)
     return render(request, "message.html", context)
 
 

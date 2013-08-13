@@ -33,6 +33,7 @@ from django.http import Http404
 
 from hyperkitty.models import Tag, Favorite
 from hyperkitty.lib import get_store
+from hyperkitty.lib.plugins import pluginRegistry
 from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate, \
         get_category_widget, get_months, get_display_dates, daterange, \
         is_thread_unread
@@ -40,12 +41,6 @@ from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate, \
 
 if settings.USE_MOCKUPS:
     from hyperkitty.lib.mockup import generate_top_author, generate_thread_per_category
-
-
-Thread = namedtuple('Thread', [
-    "thread_id", "subject", "participants", "length", "date_active",
-    "likes", "dislikes", "likestatus", "category", "unread",
-    ])
 
 
 def archives(request, mlist_fqdn, year=None, month=None, day=None):
@@ -86,10 +81,10 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
     for thread in threads:
         participants.update(thread.participants)
 
-        # Votes
-        set_thread_votes(thread, request.user)
+        # Plugins
+        pluginRegistry.thread_view(request, thread, extra_context)
 
-        # Favorites
+        # Favorites XXX to plugin
         thread.favorite = False
         if request.user.is_authenticated():
             try:
@@ -101,14 +96,14 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
             else:
                 thread.favorite = True
 
-        # Tags
+        # Tags XXX to plugin
         try:
             thread.tags = Tag.objects.filter(threadid=thread.thread_id,
                                              list_address=mlist.name)
         except Tag.DoesNotExist:
             thread.tags = []
 
-        # Category
+        # Category XXX to plugin
         thread.category_hk, thread.category_form = \
                 get_category_widget(request, thread.category)
 
@@ -134,6 +129,8 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
     context.update(extra_context)
     return render(request, template_name, context)
 
+class C:
+    pass
 
 def overview(request, mlist_fqdn=None):
     if not mlist_fqdn:
@@ -155,17 +152,22 @@ def overview(request, mlist_fqdn=None):
 
     threads = []
     participants = set()
+    extra_context = {}
+    Thread = namedtuple('Thread', pluginRegistry.thread_indexes)
     for thread_obj in threads_result:
-        # Votes
-        set_thread_votes(thread_obj, request.user)
-        thread = Thread(thread_obj.thread_id, thread_obj.subject,
-                        thread_obj.participants, len(thread_obj),
-                        thread_obj.date_active.replace(tzinfo=utc),
-                        thread_obj.likes, thread_obj.dislikes,
-                        thread_obj.likestatus,
-                        get_category_widget(None, thread_obj.category)[0],
-                        is_thread_unread(request, mlist.name, thread_obj),
-                        )
+        thrd = C()
+        # Plugins 
+        thrd.thread_id = thread_obj.thread_id
+        thrd.email_id_hashes = thread_obj.email_id_hashes
+        thrd.subject = thread_obj.subject
+        thrd.length = len(thread_obj)
+        thrd.participants = thread_obj.participants
+        thrd.date_active = thread_obj.date_active.replace(tzinfo=utc)
+        # XXX move to plugins
+        thrd.category = get_category_widget(None, thread_obj.category)[0]
+        thrd.unread = is_thread_unread(request, mlist.name, thread_obj)
+        pluginRegistry.thread_view(request, thrd, extra_context)
+        thread = Thread(**thrd.__dict__)
         # Statistics on how many participants and threads this month
         participants.update(thread.participants)
         threads.append(thread)
@@ -192,10 +194,9 @@ def overview(request, mlist_fqdn=None):
         top_posters.append({"name": poster[0], "email": poster[1],
                             "count": poster[2]})
 
-    # Popular threads
-    pop_threads = sorted([ t for t in threads if t.likes - t.dislikes > 0 ],
-                         key=lambda t: t.likes - t.dislikes,
-                         reverse=True)
+    # Popular threads 
+    #XXX Plugin !!
+    pluginRegistry.threads_overview(threads,extra_context)
 
     # Threads by category
     threads_by_category = {}
@@ -234,11 +235,9 @@ def overview(request, mlist_fqdn=None):
     context = {
         'view_name': 'overview',
         'mlist' : mlist,
-        'top_threads': top_threads[:5],
         'most_active_threads': active_threads[:5],
         'top_author': authors,
         'top_posters': top_posters,
-        'pop_threads': pop_threads[:5],
         'threads_by_category': threads_by_category,
         'months_list': get_months(store, mlist.name),
         'evolution': evolution,
@@ -247,4 +246,5 @@ def overview(request, mlist_fqdn=None):
         'num_threads': len(threads),
         'num_participants': len(participants),
     }
+    context.update(extra_context)
     return render(request, "overview.html", context)

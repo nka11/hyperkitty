@@ -66,7 +66,7 @@
     {% endif %}
 
     <div class="email-info">
-        {% for plugin_template in plugins_templates %}
+        {% for plugin_template in plugins_message_templates %}
             {% include plugin_template with mlist_fqdn=mlist.name  message_id_hash=email.message_id_hash object=email %}
         {% endfor %}
         {% if not unfolded and email.attachments|count %}

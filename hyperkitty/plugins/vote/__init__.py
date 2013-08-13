@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU General Public License along with
 # HyperKitty.  If not, see <http://www.gnu.org/licenses/>.
 #
+# Author: Nicolas Karageuzian <nicolas@karageuzian.com>
+#
 
-from voting import set_message_votes
+from voting import set_message_votes, set_thread_votes
 from django.conf.urls import patterns, include, url
 from hyperkitty.lib import get_store
 from models import Rating
@@ -27,8 +29,9 @@ templatesdir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'template
 
 
 class VotePlugin(IPlugin):
+    thread_indexes = ["likes", "dislikes", "likestatus"]
     def __init__(self):
-        self.templates = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
+        self.templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
         self.message_templates = ["messages/like_form.html"]
         self.profile_tab = "Votes"
         self.urls = patterns('hyperkitty.plugins.vote.views',
@@ -36,8 +39,12 @@ class VotePlugin(IPlugin):
                 'message_vote', name='message_vote'),
             url(r'^accounts/profile/votes$', 'votes', name='user_votes'),
         )
-    def message_index(self,request,message):
+    def message_view(self,request,message):
         set_message_votes(message, request.user)
-
-
+    def thread_view(self,request,thread):
+        set_thread_votes(thread,request.user)
+    def threads_overview(self,threads,context):
+        context['pop_threads'] = sorted([ t for t in threads if t.likes - t.dislikes > 0 ],
+             key=lambda t: t.likes - t.dislikes,
+             reverse=True)[:5]
 

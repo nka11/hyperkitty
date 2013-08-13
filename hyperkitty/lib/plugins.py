@@ -21,12 +21,18 @@
 from django.conf.urls import patterns, include, url
 from django.conf import settings
 
+def plugins_list():
+    pass
+
 class PluginRegistry():
     plugins = {}
     pluginsClass = {}
     urls = None
     message_index_hooks = []
     templates_dirs = []
+    thread_indexes = [    "thread_id","email_id_hashes", "subject", "participants", "length", "date_active",
+             "category", "unread",
+                ]
     def __init__(self):
         self.urls = patterns('',url(r'plugins/','hyperkitty.lib.plugins.plugins_list'))
     def plugins_list(self):
@@ -40,29 +46,64 @@ class PluginRegistry():
     #XXX handle some plugin conf
     # or may be plugin-dev driven
     def init_plugins(self):
+        """
+        Initialize plugins
+        """
         for pluginClass in self.pluginsClass.keys():
             # instanciate every registered plugin
             self.plugins[pluginClass] = self.pluginsClass[pluginClass]()
-            if 'templates' in self.plugins[pluginClass].__dict__.keys():
-                self.templates_dirs.append(self.plugins[pluginClass].templates)
+            if 'templates_dir' in self.plugins[pluginClass].__dict__.keys():
+                self.templates_dirs.append(self.plugins[pluginClass].templates_dir)
             if 'urls' in self.plugins[pluginClass].__dict__.keys():
                 if self.urls != None:
                    self.urls += self.plugins[pluginClass].urls
                 else:
                     self.urls = self.plugins[pluginClass].urls
-            
-    def message_index(self,request,message,context=None):
-        if context != None and 'plugins_templates' not in context:
-            context['plugins_templates'] = []
+            if self.plugins[pluginClass].thread_indexes:
+                self.thread_indexes.extend(self.plugins[pluginClass].thread_indexes)
+                
+    def thread_view(self,request,thread,context=None):
+        """
+        """
+        if context != None and 'plugins_thread_templates' not in context:
+            context['plugins_thread_templates'] = []
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
-            if plugin.message_index :
-                plugin.message_index(request,message)
-            if context != None and "message_templates" in plugin.__dict__ and pluginName + "_message_index_templates" not in request.__dict__:
+            if plugin.thread_view :
+                plugin.thread_view(request,thread)
+            if context != None and "thread_templates" in plugin.__dict__.keys() and pluginName + "_thread_index_templates" not in request.__dict__.keys():
+                request.__dict__[pluginName + "_thread_templates"] = True
+                context['plugins_thread_templates'].extend(plugin.message_templates)
+    
+    def threads_overview(self,threads,context):
+        """
+        """
+        if 'plugins_overview_templates' not in context:
+            context['plugins_overview_templates'] = []
+        for pluginName in self.plugins.keys():
+            plugin = self.plugins[pluginName]
+            if  plugin.threads_overview :
+                plugin.threads_overview(threads,context)
+            if "overview_templates" in plugin.__dict__.keys() and\
+             pluginName + "_overview_templates" not in request.__dict__.keys():
+                request.__dict__[pluginName + "_overview_templates"] = True
+                context['overview_templates'].extend(plugin.overview_templates)
+    
+    def message_view(self,request,message,context=None):
+        """
+        Entry point for a single message view
+        """
+        if context != None and 'plugins_message_templates' not in context:
+            context['plugins_message_templates'] = []
+        for pluginName in self.plugins.keys():
+            plugin = self.plugins[pluginName]
+            if plugin.message_view :
+                plugin.message_view(request,message)
+            if context != None and "message_templates" in plugin.__dict__.keys() and pluginName + "_message_index_templates" not in request.__dict__.keys():
                 request.__dict__[pluginName + "_message_index_templates"] = True
-                context['plugins_templates'].extend(plugin.message_templates)
-def plugins_list():
-    pass
+                context['plugins_message_templates'].extend(plugin.message_templates)
+    def plugins_list():
+        pass
 
 pluginRegistry = PluginRegistry()
 

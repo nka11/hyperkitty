@@ -124,7 +124,7 @@ def search(request, page=1):
         'sort_mode': sort_mode,
     }
     for message in messages:
-        pluginRegistry.message_index(request,message,context)
+        pluginRegistry.message_view(request,message,context)
     return render(request, "search_results.html", context)
 
 

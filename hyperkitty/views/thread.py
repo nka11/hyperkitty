@@ -64,7 +64,7 @@ def _get_thread_replies(request, thread, context, offset=1, limit=None):
     emails = list(emails)
     for email in emails:
         # Extract all the votes for this message
-        pluginRegistry.message_index(request,email,context)
+        pluginRegistry.message_view(request,email,context)
         if sort_mode == "thread":
             email.level = email.thread_depth - 1 # replies start ragged left
             if email.level > 5:
@@ -168,7 +168,7 @@ def thread_index(request, mlist_fqdn, threadid, month=None, year=None):
         'category': category,
         'flash_messages': flash_messages,
     }
-    pluginRegistry.message_index(request,thread.starting_email,context)
+    pluginRegistry.message_view(request,thread.starting_email,context)
     context['first_mail'] = thread.starting_email
     context["participants"].sort(key=lambda x: x[0].lower())
     if is_bot:
