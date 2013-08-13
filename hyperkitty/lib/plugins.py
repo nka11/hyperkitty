@@ -88,13 +88,12 @@ class IPlugin():
     """
     __metaclass__ = PluginMeta
 
-# Load external plugins - raw hack for instance
-#XXX Conf driven loading
-# import hyperkitty.plugins.vote
+# Load external plugins
 
-for pluginName in settings.HYPERKITTY_PLUGINS:
-    __import__(pluginName)
+for pluginModule in settings.HYPERKITTY_PLUGINS:
+    __import__(pluginModule)
 
+#Initialize all plugins
 pluginRegistry.init_plugins()
 
     
