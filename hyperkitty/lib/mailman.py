@@ -35,3 +35,4 @@ def subscribe(list_address, user):
                 "%s %s" % (user.first_name, user.last_name))
         member.preferences["delivery_status"] = "by_user"
         member.preferences.save()
+
