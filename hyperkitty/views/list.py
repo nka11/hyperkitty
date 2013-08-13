@@ -36,7 +36,6 @@ from hyperkitty.lib import get_store
 from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate, \
         get_category_widget, get_months, get_display_dates, daterange, \
         is_thread_unread
-from hyperkitty.lib.voting import get_votes, set_message_votes, set_thread_votes
 
 
 if settings.USE_MOCKUPS:

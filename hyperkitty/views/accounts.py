@@ -38,11 +38,13 @@ from social_auth.backends import SocialAuthBackend
 import dateutil.parser
 import mailmanclient
 
-from hyperkitty.models import UserProfile, Rating, Favorite, LastView
+from hyperkitty.models import UserProfile, Favorite, LastView
 from hyperkitty.views.forms import RegistrationForm, UserProfileForm
 from hyperkitty.lib import get_store
 from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate
 
+#XXX Extract vote features from accounts views (make plugin entryPoint for this view)
+from hyperkitty.plugins.vote.models import Rating
 
 logger = logging.getLogger(__name__)
 

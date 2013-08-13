@@ -40,7 +40,6 @@ from hyperkitty.lib import get_store, stripped_subject
 from hyperkitty.lib.view_helpers import (get_months, get_category_widget,
         FLASH_MESSAGES)
 from hyperkitty.lib.plugins import pluginRegistry
-from hyperkitty.lib.voting import set_message_votes
 
 
 def _get_thread_replies(request, thread, context, offset=1, limit=None):
@@ -66,7 +65,6 @@ def _get_thread_replies(request, thread, context, offset=1, limit=None):
     for email in emails:
         # Extract all the votes for this message
         pluginRegistry.message_index(request,email,context)
-        #set_message_votes(email, request.user)
         if sort_mode == "thread":
             email.level = email.thread_depth - 1 # replies start ragged left
             if email.level > 5:
@@ -84,7 +82,6 @@ def thread_index(request, mlist_fqdn, threadid, month=None, year=None):
     prev_thread, next_thread = store.get_thread_neighbors(mlist_fqdn, threadid)
 
     sort_mode = request.GET.get("sort", "thread")
-#    set_message_votes(thread.starting_email, request.user)
 
     # Tags
     tag_form = AddTagForm()

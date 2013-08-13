@@ -27,7 +27,7 @@ from django.http import Http404
 from hyperkitty.models import Tag
 from hyperkitty.lib import get_store
 from hyperkitty.lib.view_helpers import paginate
-from hyperkitty.lib.voting import get_votes, set_message_votes
+from hyperkitty.lib.plugins import pluginRegistry
 
 from hyperkitty.views.list import _thread_list
 
@@ -111,8 +111,7 @@ def search(request, page=1):
                                 sortedby=sortedby, reverse=reverse)
     total = query_result["total"]
     messages = query_result["results"]
-    for message in messages:
-        set_message_votes(message, request.user)
+
 
     paginator = SearchPaginator(messages, 10, total)
     messages = paginate(messages, page_num, paginator=paginator)
@@ -124,6 +123,8 @@ def search(request, page=1):
         'total': total,
         'sort_mode': sort_mode,
     }
+    for message in messages:
+        pluginRegistry.message_index(request,message,context)
     return render(request, "search_results.html", context)
 
 

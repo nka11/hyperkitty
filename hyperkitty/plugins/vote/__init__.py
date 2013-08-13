@@ -1,4 +1,4 @@
-from hyperkitty.lib.voting import set_message_votes
+from voting import set_message_votes
 from django.conf.urls import patterns, include, url
 from hyperkitty.lib import get_store
 import django.utils.simplejson as json
@@ -6,7 +6,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.template import RequestContext, loader
 from django.http import HttpResponse, Http404
 #XXX move Rating in Plugin
-from hyperkitty.models import Rating
+from models import Rating
 from hyperkitty.lib.plugins import IPlugin
 import os
 templatesdir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')

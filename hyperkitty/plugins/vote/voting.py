@@ -20,7 +20,7 @@
 #
 
 
-from hyperkitty.models import Rating
+from models import Rating
 
 
 def get_votes(msgid, user=None):
