@@ -33,6 +33,7 @@ class VotePlugin(IPlugin):
     def __init__(self):
         self.templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
         self.message_templates = ["messages/like_form.html"]
+        self.thread_templates = ["messages/like_form.html"]
         self.profile_tab = "Votes"
         self.urls = patterns('hyperkitty.plugins.vote.views',
             url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/vote$',

@@ -24,7 +24,9 @@
                     <li class="discussion">
                         {{ thread.length }}
                     </li>
-                    <span class="likestatus {{ thread.likestatus }}">+{{ thread.likes }}/-{{ thread.dislikes }}</span>
+                    {% for plugin_template in plugins_thread_templates %}
+                        {% include plugin_template with object=thread %}
+                    {% endfor %}
                 </ul>
             </div>
         </div>
