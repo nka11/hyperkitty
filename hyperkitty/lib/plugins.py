@@ -68,40 +68,40 @@ class PluginRegistry():
             if 'thread_templates' in plugin.__dict__.keys():
                 self.thread_templates.extend(plugin.thread_templates)
             if 'overview_templates' in plugin.__dict__.keys():
-                self.thread_overview.extend(plugin.overview_templates)
+                self.overview_templates.extend(plugin.overview_templates)
             if plugin.thread_indexes:
                 self.thread_indexes.extend(plugin.thread_indexes)
                 
     def thread_view(self,request,thread,context=None):
         """
         """
-        if context and 'plugins_thread_templates' not in context:
+        if context != None and 'plugins_thread_templates' not in context.keys():
             context['plugins_thread_templates'] = self.thread_templates
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
             if plugin.thread_view :
-                plugin.thread_view(request,thread)
+                plugin.thread_view(request,thread,context)
     
-    def threads_overview(self,threads,context):
+    def threads_overview(self,request,threads,context=None):
         """
         """
-        if context and 'plugins_overview_templates' not in context:
+        if context != None and 'plugins_overview_templates' not in context.keys():
             context['plugins_overview_templates'] = self.overview_templates
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
             if  plugin.threads_overview :
-                plugin.threads_overview(threads,context)
+                plugin.threads_overview(request,threads,context)
     
     def message_view(self,request,message,context=None):
         """
         Entry point for a single message view
         """
-        if context and 'plugins_message_templates' not in context:
+        if context != None and 'plugins_message_templates' not in context:
             context['plugins_message_templates'] = self.message_templates
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
             if plugin.message_view :
-                plugin.message_view(request,message)
+                plugin.message_view(request,message,context)
                 
     def plugins_list():
         pass

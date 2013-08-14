@@ -44,15 +44,9 @@
                     {% include "threads/summary_thread.html" with counter=forloop.counter %}
                 {% endfor %}
             </section>
-
-            <section id="popular-threads" class="widget">
-                <h3>Most popular discussions</h3>
-                {% for thread in pop_threads %}
-                    {% include "threads/summary_thread.html" with counter=forloop.counter %}
-                {% empty %}
-                    <p>No vote has been cast this month (yet).</p>
-                {% endfor %}
-            </section>
+            {% for plugin_template in plugins_overview_templates %}
+                {% include plugin_template %}
+            {% endfor %}
 
             <section id="discussion-maker" class="widget">
                 <h3>Most active posters</h3>

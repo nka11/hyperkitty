@@ -196,8 +196,7 @@ def overview(request, mlist_fqdn=None):
 
     # Popular threads 
     #XXX Plugin !!
-    pluginRegistry.threads_overview(threads,extra_context)
-
+    pluginRegistry.threads_overview(request,threads,extra_context)
     # Threads by category
     threads_by_category = {}
     for thread in active_threads:

@@ -32,19 +32,20 @@ class VotePlugin(IPlugin):
     thread_indexes = ["likes", "dislikes", "likestatus"]
     def __init__(self):
         self.templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
-        self.message_templates = ["messages/like_form.html"]
-        self.thread_templates = ["messages/like_form.html"]
+        self.message_templates = ["vote/messages/like_form.html"]
+        self.thread_templates = ["vote/threads/like.html"]
+        self.overview_templates = ["vote/threads/overview.html"]
         self.profile_tab = "Votes"
         self.urls = patterns('hyperkitty.plugins.vote.views',
             url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/vote$',
                 'message_vote', name='message_vote'),
             url(r'^accounts/profile/votes$', 'votes', name='user_votes'),
         )
-    def message_view(self,request,message):
+    def message_view(self,request,message,context):
         set_message_votes(message, request.user)
-    def thread_view(self,request,thread):
+    def thread_view(self,request,thread,context):
         set_thread_votes(thread,request.user)
-    def threads_overview(self,threads,context):
+    def threads_overview(self,request,threads,context):
         context['pop_threads'] = sorted([ t for t in threads if t.likes - t.dislikes > 0 ],
              key=lambda t: t.likes - t.dislikes,
              reverse=True)[:5]
