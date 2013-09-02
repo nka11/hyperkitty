@@ -30,7 +30,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import login as django_login_view
 from django.shortcuts import render, redirect
-from django.utils.http import is_safe_url, urlquote
+from django.utils.http import is_safe_url
 from django.utils.timezone import utc, get_current_timezone
 from django.http import Http404, HttpResponse
 #from django.utils.translation import gettext as _
@@ -42,6 +42,7 @@ from hyperkitty.models import UserProfile, Favorite, LastView
 from hyperkitty.views.forms import RegistrationForm, UserProfileForm
 from hyperkitty.lib import get_store
 from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate
+from hyperkitty.lib.mailman import get_subscriptions
 
 #XXX Extract vote features from accounts views (make plugin entryPoint for this view)
 from hyperkitty.plugins.vote.models import Rating
@@ -64,7 +65,7 @@ def login_view(request, *args, **kwargs):
 
 
 @login_required
-def user_profile(request, user_email=None):
+def user_profile(request):
     if not request.user.is_authenticated():
         return redirect('user_login')
 
@@ -76,6 +77,16 @@ def user_profile(request, user_email=None):
     except ObjectDoesNotExist:
         user_profile = UserProfile.objects.create(user=request.user)
 
+    # get the Mailman user
+    try:
+        mm_client = mailmanclient.Client('%s/3.0' %
+                    settings.MAILMAN_REST_SERVER,
+                    settings.MAILMAN_API_USER,
+                    settings.MAILMAN_API_PASS)
+        mm_user = mm_client.get_user(request.user.email)
+    except (HTTPError, mailmanclient.MailmanConnectionError):
+        mm_client = mm_user = None
+
     if request.method == 'POST':
         form = UserProfileForm(request.POST)
         if form.is_valid():
@@ -84,6 +95,11 @@ def user_profile(request, user_email=None):
             user_profile.timezone = form.cleaned_data["timezone"]
             request.user.save()
             user_profile.save()
+            # Now update the display name in Mailman
+            if mm_user is not None:
+                mm_user.display_name = "%s %s" % (
+                        request.user.first_name, request.user.last_name)
+                mm_user.save()
             redirect_url = reverse('user_profile')
             redirect_url += "?msg=updated-ok"
             return redirect(redirect_url)
@@ -106,6 +122,14 @@ def user_profile(request, user_email=None):
             fav.delete() # thread has gone away?
     favorites = [ f for f in favorites if f.thread is not None ]
 
+    # Emails
+    emails = []
+    if mm_user is not None:
+        for addr in mm_user.addresses:
+            addr = unicode(addr)
+            if addr != request.user.email:
+                emails.append(addr)
+
     # Flash messages
     flash_messages = []
     flash_msg = request.GET.get("msg")
@@ -117,6 +141,7 @@ def user_profile(request, user_email=None):
     context = {
         'user_profile' : user_profile,
         'form': form,
+        'emails': emails,
         'favorites': favorites,
         'flash_messages': flash_messages,
     }
@@ -190,6 +215,44 @@ def last_views(request):
                 "last_views": last_views,
             })
 
+@login_required
+def votes(request):
+    store = get_store(request)
+    # Votes
+    try:
+        votes = Rating.objects.filter(user=request.user)
+    except Rating.DoesNotExist:
+        votes = []
+    votes = paginate(votes, request.GET.get('vpage'))
+    for vote in votes:
+        vote.message = store.get_message_by_hash_from_list(
+                vote.list_address, vote.messageid)
+        if vote.message is None:
+            vote.delete()
+    votes = [ v for v in votes if v.message is not None ]
+    return render(request, 'ajax/votes.html', {
+                "votes": votes,
+            })
+
+
+@login_required
+def subscriptions(request):
+    store = get_store(request)
+    # get the Mailman user
+    try:
+        mm_client = mailmanclient.Client('%s/3.0' %
+                    settings.MAILMAN_REST_SERVER,
+                    settings.MAILMAN_API_USER,
+                    settings.MAILMAN_API_PASS)
+        mm_user = mm_client.get_user(request.user.email)
+    except (HTTPError, mailmanclient.MailmanConnectionError):
+        mm_client = mm_user = None
+    # Subscriptions
+    subscriptions = get_subscriptions(store, mm_client, mm_user)
+    return render(request, 'fragments/user_subscriptions.html', {
+                "subscriptions": subscriptions,
+            })
+
 
 def public_profile(request, user_id):
     try:
@@ -203,48 +266,12 @@ def public_profile(request, user_id):
     except mailmanclient.MailmanConnectionError:
         return HttpResponse("Can't connect to Mailman",
                             content_type="text/plain", status=500)
+    store = get_store(request)
     fullname = mm_user.display_name
     if not fullname:
         fullname = store.get_sender_name(user_id)
-    subscriptions = []
-    store = get_store(request)
-    context = {}
     # Subscriptions
-    for mlist_id in mm_user.subscription_list_ids:
-        mlist = client.get_list(mlist_id).fqdn_listname
-        # de-duplicate subscriptions
-        if mlist in [ s["list_name"] for s in subscriptions ]:
-            continue
-        email_hashes = store.get_message_hashes_by_user_id(user_id, mlist)
-        try: # Compute the average vote value
-        #XXX pull out votes from here - haz to be handled by plugin
-        # as here is is quite imbricated, have to discuss on how to do
-            votes = Rating.objects.filter(list_address=mlist,
-                                          messageid__in=email_hashes)
-        except Rating.DoesNotExist:
-            votes = []
-        likes = dislikes = 0
-        for v in votes:
-            if v.vote == 1:
-                likes += 1
-            elif v.vote == -1:
-                dislikes += 1
-        all_posts_url = "%s?list=%s&query=user_id:%s" % \
-                (reverse("search"), mlist, urlquote(user_id))
-        likestatus = "neutral"
-        if likes - dislikes >= 10:
-            likestatus = "likealot"
-        elif likes - dislikes > 0:
-            likestatus = "like"
-        subscriptions.append({
-            "list_name": mlist,
-            "first_post": store.get_first_post(mlist, user_id),
-            "likes": likes,
-            "dislikes": dislikes,
-            "likestatus": likestatus,
-            "all_posts_url": all_posts_url,
-            "posts_count": len(email_hashes),
-        })
+    subscriptions = get_subscriptions(store, client, mm_user)
     likes = sum([s["likes"] for s in subscriptions])
     dislikes = sum([s["dislikes"] for s in subscriptions])
     likestatus = "neutral"
