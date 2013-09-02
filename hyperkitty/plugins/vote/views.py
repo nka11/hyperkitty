@@ -69,7 +69,7 @@ def message_vote(request, mlist_fqdn, message_id_hash):
 
     # Extract all the votes for this message to refresh it
     set_message_votes(message, request.user)
-    t = loader.get_template('messages/like_form.html')
+    t = loader.get_template('vote/messages/like_form.html')
     html = t.render(RequestContext(request, {
             "object": message,
             "message_id_hash": message_id_hash,

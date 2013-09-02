@@ -208,6 +208,7 @@ def public_profile(request, user_id):
         fullname = store.get_sender_name(user_id)
     subscriptions = []
     store = get_store(request)
+    context = {}
     # Subscriptions
     for mlist_id in mm_user.subscription_list_ids:
         mlist = client.get_list(mlist_id).fqdn_listname
@@ -218,7 +219,6 @@ def public_profile(request, user_id):
         try: # Compute the average vote value
         #XXX pull out votes from here - haz to be handled by plugin
         # as here is is quite imbricated, have to discuss on how to do
-        # However, can't see where it is used at all
             votes = Rating.objects.filter(list_address=mlist,
                                           messageid__in=email_hashes)
         except Rating.DoesNotExist:

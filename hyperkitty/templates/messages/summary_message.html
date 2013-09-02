@@ -35,7 +35,7 @@
             <div class="thread-info">
                 <div class="tags">
                 </div>
-                {% for plugin_template in plugins_templates %}
+                {% for plugin_template in plugins_message_templates %}
             {% include plugin_template with mlist_fqdn=mlist.name  message_id_hash=message.message_id_hash object=message %}
                 {% endfor %}
                 <a href="{% url 'message_index' message_id_hash=message.message_id_hash mlist_fqdn=message.list_name %}"
