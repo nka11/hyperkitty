@@ -27,6 +27,8 @@ def get_store(request):
 def stripped_subject(mlist, subject):
     if mlist is None:
         return subject
+    if not mlist.subject_prefix:
+        return subject
     if subject.lower().startswith(mlist.subject_prefix.lower()):
         subject = subject[len(mlist.subject_prefix) : ]
     return subject

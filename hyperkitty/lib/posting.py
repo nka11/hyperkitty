@@ -40,8 +40,9 @@ def post_to_list(request, mlist, subject, message, headers={},
     try:
         mailman.subscribe(mlist.name, request.user)
     except MailmanConnectionError:
-        raise PostingFailed("Can't connect to Mailman's REST server, "
-                            "your message has not been sent.")
+        pass
+#        raise PostingFailed("Can't connect to Mailman's REST server, "
+#                            "your message has not been sent.")
     # send the message
     headers["User-Agent"] = "HyperKitty on %s" % request.build_absolute_uri("/")
     if not request.user.first_name and not request.user.last_name:
