@@ -1,8 +1,8 @@
 %global pypi_name HyperKitty
 
 Name:           hyperkitty
-Version:        0.1.6
-Release:        1%{?dist}
+Version:        0.1.7
+Release:        0.1%{?dist}
 Summary:        A web interface to access GNU Mailman v3 archives
 
 License:        GPLv3
@@ -44,7 +44,8 @@ BuildRequires:  python-django-south
 Requires:       django-gravatar2
 Requires:       django-social-auth >= 0.7.1
 Requires:       django-rest-framework >= 2.2.0
-Requires:       mailman >= 3:3.0.0
+#Requires:       mailman >= 3:3.0.0
+Requires:       mailman3
 Requires:       kittystore
 Requires:       django-crispy-forms
 Requires:       django-assets
@@ -139,14 +140,6 @@ rm -f hyperkitty_standalone/__init__.py
     assets build --parse-templates &>/dev/null || :
 
 
-%preun
-# The static files are a cache and can be removed with the package
-if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
-    rm -rf %{_localstatedir}/lib/%{name}/sites/default/static
-fi
-
-
 %files
 %doc html README.rst COPYING.txt
 %config(noreplace) %{_sysconfdir}/%{name}
@@ -162,6 +155,10 @@ fi
 
 
 %changelog
+* Thu Aug 15 2013 Aurelien Bompard <abompard@fedoraproject.org> - 0.1.7-0.1
+- don't remove the static files cache on uninstall (it may have local
+  modifications)
+
 * Tue Jul 23 2013 Aurelien Bompard <abompard@fedoraproject.org> - 0.1.6-1
 - version 0.1.6
 

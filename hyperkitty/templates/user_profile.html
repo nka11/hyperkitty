@@ -21,6 +21,7 @@
         <li><a href="#favorites">Favorites</a></li>
         <li><a href="#views">Threads you have read</a></li>
         <li><a href="#votes">Votes</a></li>
+        <li><a href="#subscriptions">Subscriptions</a></li>
     </ul>
 
     <div id="account">
@@ -37,6 +38,16 @@
                     <th>{% trans 'Email:' %}</th>
                     <td>{{ user.email }}</td>
                 </tr>
+                {% if emails %}
+                <tr>
+                    <th>{% trans 'Other emails:' %}</th>
+                    <td><ul>
+                    {% for email in emails %}
+                        <li>{{ email }}</li>
+                    {% endfor %}
+                    </ul></td>
+                </tr>
+                {% endif %}
                 {% if use_mockups %}
                 <tr>
                     <th>{% trans 'Karma:' %}</th>
@@ -82,13 +93,19 @@
 
     <div id="views">
         <img alt="Loading..." class="ajaxloader" src="{{ STATIC_URL }}hyperkitty/img/ajax-loader.gif" />
-        <div class="ajaxcontent"></div>
+        <div class="ajaxcontent" data-load-from="{% url 'user_last_views' %}"></div>
     </div>
 
 
     <div id="votes">
         <img alt="Loading..." class="ajaxloader" src="{{ STATIC_URL }}hyperkitty/img/ajax-loader.gif" />
-        <div class="ajaxcontent"></div>
+        <div class="ajaxcontent" data-load-from="{% url 'user_votes' %}"></div>
+    </div>
+
+
+    <div id="subscriptions">
+        <img alt="Loading..." class="ajaxloader" src="{{ STATIC_URL }}hyperkitty/img/ajax-loader.gif" />
+        <div class="ajaxcontent" data-load-from="{% url 'user_subscriptions' %}"></div>
     </div>
 
     </div>
@@ -102,8 +119,9 @@
     $(document).ready(function() {
         // Load the last views
         $(".tabbed").tabs();
-        update_user_profile_part("#views div.ajaxcontent", "{% url 'user_last_views' %}");
-        update_user_profile_part("#votes div.ajaxcontent", "{% url 'user_votes' %}");
+        $("div.ajaxcontent").each(function() {
+            update_user_profile_part($(this));
+        });
     });
 </script>
 
