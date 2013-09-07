@@ -19,7 +19,7 @@
 # Author: Nicolas Karageuzian <nicolas@karageuzian.com>
 #
 
-from voting import set_message_votes, set_thread_votes
+from voting import set_message_votes, set_thread_votes, get_likes_sum
 from django.conf.urls import patterns, include, url
 from hyperkitty.lib import get_store
 from models import Rating
@@ -41,8 +41,13 @@ class VotePlugin(IPlugin):
                 'message_vote', name='message_vote'),
             url(r'^accounts/profile/votes$', 'votes', name='user_votes'),
         )
+    
+    def process_subscriptions(self,subscriptions,context):
+        get_likes_sum(subscriptions,context)
+    
     def message_view(self,request,message,context):
         set_message_votes(message, request.user)
+    
     def thread_view(self,request,thread,context):
         set_thread_votes(thread,request.user)
     def threads_overview(self,request,threads,context):

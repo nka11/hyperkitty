@@ -81,7 +81,11 @@ class PluginRegistry():
             plugin = self.plugins[pluginName]
             if plugin.thread_view :
                 plugin.thread_view(request,thread,context)
-    
+    def process_subscriptions(self,subscriptions,context):
+        for pluginName in self.plugins.keys():
+            plugin = self.plugins[pluginName]
+            if  plugin.process_subscriptions :
+                plugin.process_subscriptions(subscriptions,context)
     def threads_overview(self,request,threads,context=None):
         """
         """
@@ -133,6 +137,7 @@ class IPlugin():
 # Load external plugins
 
 for pluginModule in settings.HYPERKITTY_PLUGINS:
+    print 'loading ' + pluginModule
     __import__(pluginModule)
 
 #Initialize all plugins

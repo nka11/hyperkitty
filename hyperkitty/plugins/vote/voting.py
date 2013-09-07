@@ -57,6 +57,17 @@ def set_message_votes(message, user=None):
     #elif message.likes - message.dislikes < 0:
     #    message.likestatus = "dislike"
 
+def get_likes_sum(subscriptions, context):
+    likes = sum([s["likes"] for s in subscriptions])
+    dislikes = sum([s["dislikes"] for s in subscriptions])
+    likestatus = "neutral"
+    if likes - dislikes >= 10:
+        likestatus = "likealot"
+    elif likes - dislikes > 0:
+        likestatus = ""
+    context["likes"] = likes
+    context["dislikes"] = dislikes
+    context["likestatus"] = likestatus
 
 def set_thread_votes(thread, user=None):
     total = 0
