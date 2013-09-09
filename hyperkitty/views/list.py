@@ -35,8 +35,7 @@ from hyperkitty.models import Tag, Favorite
 from hyperkitty.lib import get_store
 from hyperkitty.lib.plugins import pluginRegistry
 from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate, \
-        get_category_widget, get_months, get_display_dates, daterange, \
-        is_thread_unread
+        get_category_widget, get_months, get_display_dates, daterange
 
 
 if settings.USE_MOCKUPS:
@@ -80,7 +79,7 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
     participants = set()
     for thread in threads:
         participants.update(thread.participants)
-
+        
         # Plugins
         pluginRegistry.thread_view(request, thread, extra_context)
 
@@ -106,9 +105,6 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
         # Category XXX to plugin
         thread.category_hk, thread.category_form = \
                 get_category_widget(request, thread.category)
-
-        # Unread status
-        thread.unread = is_thread_unread(request, mlist.name, thread)
 
     threads = paginate(threads, request.GET.get('page'))
 
