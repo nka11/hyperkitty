@@ -45,8 +45,8 @@ from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate
 from hyperkitty.lib.mailman import get_subscriptions
 
 #XXX Extract vote features from accounts views (make plugin entryPoint for this view)
-from hyperkitty.plugins.vote.models import Rating
-
+#from hyperkitty.plugins.vote.models import Rating
+from hyperkitty.lib.plugins import pluginRegistry
 logger = logging.getLogger(__name__)
 
 
@@ -215,25 +215,6 @@ def last_views(request):
                 "last_views": last_views,
             })
 
-@login_required
-def votes(request):
-    store = get_store(request)
-    # Votes
-    try:
-        votes = Rating.objects.filter(user=request.user)
-    except Rating.DoesNotExist:
-        votes = []
-    votes = paginate(votes, request.GET.get('vpage'))
-    for vote in votes:
-        vote.message = store.get_message_by_hash_from_list(
-                vote.list_address, vote.messageid)
-        if vote.message is None:
-            vote.delete()
-    votes = [ v for v in votes if v.message is not None ]
-    return render(request, 'ajax/votes.html', {
-                "votes": votes,
-            })
-
 
 @login_required
 def subscriptions(request):
@@ -270,15 +251,8 @@ def public_profile(request, user_id):
     fullname = mm_user.display_name
     if not fullname:
         fullname = store.get_sender_name(user_id)
-    # Subscriptions
-    subscriptions = get_subscriptions(store, client, mm_user)
-    likes = sum([s["likes"] for s in subscriptions])
-    dislikes = sum([s["dislikes"] for s in subscriptions])
-    likestatus = "neutral"
-    if likes - dislikes >= 10:
-        likestatus = "likealot"
-    elif likes - dislikes > 0:
-        likestatus = "like"
+    
+    
     try:
         email = unicode(mm_user.addresses[0])
     except KeyError:
@@ -287,11 +261,12 @@ def public_profile(request, user_id):
         "fullname": fullname,
         "mm_user": mm_user,
         "email": email,
-        "creation": dateutil.parser.parse(mm_user.created_on),
-        "subscriptions": subscriptions,
-        "posts_count": sum([s["posts_count"] for s in subscriptions]),
-        "likes": likes,
-        "dislikes": dislikes,
-        "likestatus": likestatus,
+        "creation": dateutil.parser.parse(mm_user.created_on)
     }
+    # Subscriptions
+    subscriptions = get_subscriptions(store, client, mm_user)
+    context["subscriptions"] = subscriptions
+    context["posts_count"] = sum([s["posts_count"] for s in subscriptions])
+    pluginRegistry.processSubscriptions(subscriptions, context)
+    
     return render(request, "user_public_profile.html", context)

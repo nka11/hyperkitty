@@ -19,22 +19,22 @@
 # Author: Nicolas Karageuzian <nicolas@karageuzian.com>
 #
 
-from voting import set_message_votes, set_thread_votes, get_likes_sum
 from django.conf.urls import patterns, include, url
+from helpers import is_thread_unread
 from hyperkitty.lib import get_store
-from models import Rating
+from hyperkitty.models import LastView
 from hyperkitty.lib.plugins import IPlugin
 import os
 templatesdir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
 
 
-class VotePlugin(IPlugin):
+class LastViewPlugin(IPlugin):
+    thread_indexes = []
     
     def __init__(self):
-        self.thread_indexes = ["likes", "dislikes", "likestatus"]
-        self.templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
+        """
         self.message_templates = ["vote/messages/like_form.html"]
-        self.thread_template = ["vote/threads/like.html"]
+        self.thread_templates = ["vote/threads/like.html"]
         self.overview_templates = ["vote/threads/overview.html"]
         self.profile_tab = "Votes"
         self.urls = patterns('hyperkitty.plugins.vote.views',
@@ -42,17 +42,42 @@ class VotePlugin(IPlugin):
                 'message_vote', name='message_vote'),
             url(r'^accounts/profile/votes$', 'votes', name='user_votes'),
         )
-    
+        """
+        self.templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
+        self.thread_indexes = [ 'unread' ]
     def process_subscriptions(self,subscriptions,context):
-        get_likes_sum(subscriptions,context)
+        """
+        """
     
     def message_view(self,request,message,context):
-        set_message_votes(message, request.user)
+        """
+        """
+    
+    def thread_index(self,request,thread,context={}):
+        """
+        """
+        # Last view
+        context['last_view'] = None
+        if request.user.is_authenticated():
+            last_view_obj, created = LastView.objects.get_or_create(
+                    list_address=context['mlist_fqdn'], threadid=context['threadid'], user=request.user)
+            if not created:
+                context['last_view'] = last_view_obj.view_date
+                last_view_obj.save() # update timestamp
+        # get the number of unread messages
+        if context['last_view'] is None:
+            if request.user.is_authenticated():
+                context['unread_count'] = len(thread)
+            else:
+                context['unread_count'] = 0
+        else:
+            # XXX: Storm-specific
+            context['unread_count'] = thread.replies_after(context['last_view']).count()
     
     def thread_view(self,request,thread,context):
-        set_thread_votes(thread,request.user)
+        """
+        """
+        thread.unread = is_thread_unread(request, thread)
+        
     def threads_overview(self,request,threads,context):
-        context['pop_threads'] = sorted([ t for t in threads if t.likes - t.dislikes > 0 ],
-             key=lambda t: t.likes - t.dislikes,
-             reverse=True)[:5]
-
+        """"""

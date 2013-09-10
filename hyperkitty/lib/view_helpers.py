@@ -25,7 +25,7 @@ import datetime
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.utils.timezone import utc
 
-from hyperkitty.models import ThreadCategory, LastView
+from hyperkitty.models import ThreadCategory
 from hyperkitty.views.forms import CategoryForm
 
 
@@ -153,20 +153,3 @@ def get_category_widget(request=None, current_category=None):
             category = None
     return category, category_form
 
-
-def is_thread_unread(request, mlist_name, thread):
-    """Returns True or False if the thread is unread or not."""
-    unread = False
-    if request.user.is_authenticated():
-        try:
-            last_view_obj = LastView.objects.get(
-                    list_address=mlist_name,
-                    threadid=thread.thread_id,
-                    user=request.user)
-        except LastView.DoesNotExist:
-            unread = True
-        else:
-            if thread.date_active.replace(tzinfo=utc) \
-                    > last_view_obj.view_date:
-                unread = True
-    return unread

@@ -34,7 +34,7 @@ class PluginRegistry():
     thread_templates = []
     overview_templates = []
     thread_indexes = [    "thread_id","email_id_hashes", "subject", "participants", "length", "date_active",
-             "category", "unread",
+             "category", 
                 ]
     def __init__(self):
         self.urls = patterns('',url(r'plugins/','hyperkitty.lib.plugins.plugins_list'))
@@ -56,32 +56,42 @@ class PluginRegistry():
             # instanciate every registered plugin
             plugin = self.pluginsClass[pluginClass]()
             self.plugins[pluginClass] = plugin
-            if plugin.templates_dir:
+            if 'templates_dir' in plugin.__dict__.keys():
                 self.templates_dirs.append(plugin.templates_dir)
-            if plugin.urls:
+            if 'urls' in plugin.__dict__.keys():
                 if self.urls != None:
                    self.urls += self.plugins[pluginClass].urls
                 else:
                     self.urls = self.plugins[pluginClass].urls
             if 'message_templates' in plugin.__dict__.keys():
                 self.message_templates.extend(plugin.message_templates)
-            if 'thread_templates' in plugin.__dict__.keys():
-                self.thread_templates.extend(plugin.thread_templates)
+            if 'thread_template' in plugin.__dict__.keys():
+                self.thread_templates.extend(plugin.thread_template)
             if 'overview_templates' in plugin.__dict__.keys():
                 self.overview_templates.extend(plugin.overview_templates)
-            if plugin.thread_indexes:
+            if 'thread_indexes' in plugin.__dict__.keys():
                 self.thread_indexes.extend(plugin.thread_indexes)
                 
     def thread_view(self,request,thread,context=None):
         """
         """
+        print "assigning templates :" + repr(self.thread_templates) 
         if context != None and 'plugins_thread_templates' not in context.keys():
             context['plugins_thread_templates'] = self.thread_templates
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
-            if plugin.thread_view :
+            try:
                 plugin.thread_view(request,thread,context)
+            except:
+                pass
     
+    def process_subscriptions(self,subscriptions,context):
+        '''
+        '''
+        for pluginName in self.plugins.keys():
+            plugin = self.plugins[pluginName]
+            if  plugin.process_subscriptions :
+                plugin.process_subscriptions(subscriptions,context)
     def threads_overview(self,request,threads,context=None):
         """
         """
@@ -91,6 +101,13 @@ class PluginRegistry():
             plugin = self.plugins[pluginName]
             if  plugin.threads_overview :
                 plugin.threads_overview(request,threads,context)
+    def thread_index(self,request,thread,context):
+        for pluginName in self.plugins.keys():
+            plugin = self.plugins[pluginName]
+            try:
+                plugin.thread_index(request,thread,context)
+            except:
+                pass
     
     def message_view(self,request,message,context=None):
         """
@@ -133,6 +150,7 @@ class IPlugin():
 # Load external plugins
 
 for pluginModule in settings.HYPERKITTY_PLUGINS:
+    print 'loading ' + pluginModule
     __import__(pluginModule)
 
 #Initialize all plugins

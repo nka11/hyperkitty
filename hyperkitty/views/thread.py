@@ -34,7 +34,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.utils.timezone import utc
 import robot_detection
 
-from hyperkitty.models import Tag, Favorite, LastView, ThreadCategory
+from hyperkitty.models import Tag, Favorite, ThreadCategory
 from hyperkitty.views.forms import AddTagForm, ReplyForm, CategoryForm
 from hyperkitty.lib import get_store, stripped_subject
 from hyperkitty.lib.view_helpers import (get_months, get_category_widget,
@@ -112,23 +112,7 @@ def thread_index(request, mlist_fqdn, threadid, month=None, year=None):
     mlist = store.get_list(mlist_fqdn)
     subject = stripped_subject(mlist, thread.starting_email.subject)
 
-    # Last view
-    last_view = None
-    if request.user.is_authenticated():
-        last_view_obj, created = LastView.objects.get_or_create(
-                list_address=mlist_fqdn, threadid=threadid, user=request.user)
-        if not created:
-            last_view = last_view_obj.view_date
-            last_view_obj.save() # update timestamp
-    # get the number of unread messages
-    if last_view is None:
-        if request.user.is_authenticated():
-            unread_count = len(thread)
-        else:
-            unread_count = 0
-    else:
-        # XXX: Storm-specific
-        unread_count = thread.replies_after(last_view).count()
+    
 
     # Flash messages
     flash_messages = []
@@ -162,12 +146,12 @@ def thread_index(request, mlist_fqdn, threadid, month=None, year=None):
         'is_bot': is_bot,
         'num_comments': len(thread),
         'participants': thread.participants,
-        'last_view': last_view,
-        'unread_count': unread_count,
         'category_form': category_form,
         'category': category,
         'flash_messages': flash_messages,
+        'mlist_fqdn': mlist_fqdn #recall param for use in plugins
     }
+    pluginRegistry.thread_index(request,thread,context)
     pluginRegistry.message_view(request,thread.starting_email,context)
     context['first_mail'] = thread.starting_email
     context["participants"].sort(key=lambda x: x[0].lower())
