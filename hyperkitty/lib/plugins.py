@@ -56,7 +56,7 @@ class PluginRegistry():
             # instanciate every registered plugin
             plugin = self.pluginsClass[pluginClass]()
             self.plugins[pluginClass] = plugin
-            if plugin.templates_dir != None:
+            if 'templates_dir' in plugin.__dict__.keys():
                 self.templates_dirs.append(plugin.templates_dir)
             if 'urls' in plugin.__dict__.keys():
                 if self.urls != None:
@@ -65,8 +65,8 @@ class PluginRegistry():
                     self.urls = self.plugins[pluginClass].urls
             if 'message_templates' in plugin.__dict__.keys():
                 self.message_templates.extend(plugin.message_templates)
-            if 'thread_templates' in plugin.__dict__.keys():
-                self.thread_templates.extend(plugin.thread_templates)
+            if 'thread_template' in plugin.__dict__.keys():
+                self.thread_templates.extend(plugin.thread_template)
             if 'overview_templates' in plugin.__dict__.keys():
                 self.overview_templates.extend(plugin.overview_templates)
             if 'thread_indexes' in plugin.__dict__.keys():
@@ -75,13 +75,19 @@ class PluginRegistry():
     def thread_view(self,request,thread,context=None):
         """
         """
+        print "assigning templates :" + repr(self.thread_templates) 
         if context != None and 'plugins_thread_templates' not in context.keys():
             context['plugins_thread_templates'] = self.thread_templates
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
-            if plugin.thread_view :
+            try:
                 plugin.thread_view(request,thread,context)
+            except:
+                pass
+    
     def process_subscriptions(self,subscriptions,context):
+        '''
+        '''
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
             if  plugin.process_subscriptions :

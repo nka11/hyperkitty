@@ -123,6 +123,7 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
         'flash_messages': flash_messages,
     }
     context.update(extra_context)
+    print repr(context)
     return render(request, template_name, context)
 
 class C:

@@ -34,7 +34,7 @@ class VotePlugin(IPlugin):
         self.thread_indexes = ["likes", "dislikes", "likestatus"]
         self.templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
         self.message_templates = ["vote/messages/like_form.html"]
-        self.thread_templates = ["vote/threads/like.html"]
+        self.thread_template = ["vote/threads/like.html"]
         self.overview_templates = ["vote/threads/overview.html"]
         self.profile_tab = "Votes"
         self.urls = patterns('hyperkitty.plugins.vote.views',
