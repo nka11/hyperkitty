@@ -29,7 +29,7 @@ templatesdir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'template
 
 
 class LastViewPlugin(IPlugin):
-    thread_indexes = []
+    thread_indexes = [ 'unread' ]
     
     def __init__(self):
         """
@@ -44,7 +44,7 @@ class LastViewPlugin(IPlugin):
         )
         """
         self.templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')
-        self.thread_indexes = [ 'unread' ]
+
     def process_subscriptions(self,subscriptions,context):
         """
         """

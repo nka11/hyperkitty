@@ -153,7 +153,7 @@ def overview(request, mlist_fqdn=None):
     Thread = namedtuple('Thread', pluginRegistry.thread_indexes)
     for thread_obj in threads_result:
         thrd = C()
-        # Plugins 
+        # Core 
         thrd.thread_id = thread_obj.thread_id
         thrd.email_id_hashes = thread_obj.email_id_hashes
         thrd.subject = thread_obj.subject
@@ -162,7 +162,6 @@ def overview(request, mlist_fqdn=None):
         thrd.date_active = thread_obj.date_active.replace(tzinfo=utc)
         # XXX move to plugins
         thrd.category = get_category_widget(None, thread_obj.category)[0]
-        thrd.unread = is_thread_unread(request, mlist.name, thread_obj)
         pluginRegistry.thread_view(request, thrd, extra_context)
         thread = Thread(**thrd.__dict__)
         # Statistics on how many participants and threads this month
