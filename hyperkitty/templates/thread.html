@@ -35,9 +35,24 @@
         </div>
         <div class="row-fluid">
             <ul class="nav nav-tabs" id="myTab">
-                <li class="active"><a href="#thread-content">Discussion</a></li>
+            <!-- default tab with thread content -->
+                <li class="active"><a href="#messages" data-toggle="tab">Discussion</a></li>
+                <!-- loop 1 : menu -->
+                {% for menuItem,menuAction in plugins_thread_tabs %}
+                
+                    <li ><a id="menuItem_{{menuItem}}" href="{{menuAction}}" data-target="#{{menuItem}}_content" data-toggle="tab">{{menuItem}}</a></li>
+                {% endfor %}
             </ul>
             <div class="tab-content">
+            	<!-- loop 2 : additional plugin message contents -->
+                {% for menuItem,menuAction in plugins_thread_tabs %}
+                <div class="tab-pane" id="{{menuItem}}_content">
+            	</div>
+                {% endfor %}
+            	<div class="tab-pane" id="plugins-content">
+            		<p>bonjour</p>
+            	</div>
+            	<!-- default thread content -->
                 <div class="tab-pane active" id="messages">
                     <div class="span9">
                         
@@ -84,7 +99,7 @@
 {% endblock %}
 
 {% block additionaljs %}
-
+<script src="/static/hyperkitty/libs/bootstrap/js/bootstrap.min.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
         setup_category();
@@ -96,6 +111,21 @@
         // Load the replies
         update_thread_replies("{% url 'thread_replies' threadid=threadid mlist_fqdn=mlist.name %}?sort={{sort_mode}}&last_view={{last_view|date:'U'}}");
         setup_unreadnavbar("#unreadnavbar");
+        {% for menuItem,menuAction in plugins_thread_tabs %}
+        $('#menuItem_{{menuItem}}').click(function(e) {
+            e.preventDefault();
+            var containerId = '#{{menuItem}}_content'; /** Specify which element container */
+            var self = $(this);
+            var url = self.attr('href');
+            $.ajax({
+                url: url,
+                success: function(data) {
+                    $(containerId).empty().append(data);
+                    self.tab('show');
+                } 
+            });
+        });
+        {% endfor %}
     });
 </script>
 

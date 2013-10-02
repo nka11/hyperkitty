@@ -21,6 +21,8 @@
 from django.conf.urls import patterns, include, url
 from django.conf import settings
 
+import hyperkitty
+
 def plugins_list():
     pass
 
@@ -29,7 +31,7 @@ class PluginRegistry():
     pluginsClass = {}
     urls = None
     templates_dirs = []
-    
+    thread_tabs = []
     message_templates = []
     thread_templates = []
     overview_templates = []
@@ -38,39 +40,51 @@ class PluginRegistry():
                 ]
     def __init__(self):
         self.urls = patterns('',url(r'plugins/','hyperkitty.lib.plugins.plugins_list'))
+        print "instanciating plugin registry"
+        #if pluginRegistry == None:
+        #	pluginRegistry = self
+        	
     def plugins_list(self):
         pass
     
     def register(self,name, pluginClass, attrs):
-        self.pluginsClass[name] = pluginClass
+        if name not in self.pluginsClass:
+            self.pluginsClass[name] = pluginClass
+            print "registered " + name
+            self.init_plugin(name)
         
     def get_urls(self):
         return self.urls
     #XXX handle some plugin conf
     # or may be plugin-dev driven
-    def init_plugins(self):
+    def init_plugin(self,pluginClass):
         """
-        Initialize plugins
+        Initialize plugin
         """
-        for pluginClass in self.pluginsClass.keys():
-            # instanciate every registered plugin
-            plugin = self.pluginsClass[pluginClass]()
-            self.plugins[pluginClass] = plugin
-            if 'templates_dir' in plugin.__dict__.keys():
-                self.templates_dirs.append(plugin.templates_dir)
-            if 'urls' in plugin.__dict__.keys():
-                if self.urls != None:
-                   self.urls += self.plugins[pluginClass].urls
-                else:
-                    self.urls = self.plugins[pluginClass].urls
-            if 'message_templates' in plugin.__dict__.keys():
-                self.message_templates.extend(plugin.message_templates)
-            if 'thread_template' in plugin.__dict__.keys():
-                self.thread_templates.extend(plugin.thread_template)
-            if 'overview_templates' in plugin.__dict__.keys():
-                self.overview_templates.extend(plugin.overview_templates)
-            if 'thread_indexes' in plugin.__dict__.keys():
-                self.thread_indexes.extend(plugin.thread_indexes)
+        
+        # instanciate every registered plugin
+        plugin = self.pluginsClass[pluginClass]()
+        self.plugins[pluginClass] = plugin
+        if 'templates_dir' in plugin.__dict__.keys():
+            self.templates_dirs.append(plugin.templates_dir)
+        try:
+            print "configuring urls for plugin " + pluginClass
+            if self.urls != None:
+               self.urls += self.plugins[pluginClass].urls
+            else:
+                self.urls = self.plugins[pluginClass].urls
+        except:
+        	""
+        if 'message_templates' in plugin.__dict__.keys():
+            self.message_templates.extend(plugin.message_templates)
+        if 'thread_template' in plugin.__dict__.keys():
+            self.thread_templates.extend(plugin.thread_template)
+        if 'overview_templates' in plugin.__dict__.keys():
+            self.overview_templates.extend(plugin.overview_templates)
+        if 'thread_indexes' in plugin.__dict__.keys():
+            self.thread_indexes.extend(plugin.thread_indexes)
+        if 'thread_tabs' in plugin.__dict__.keys():
+            self.thread_tabs.append(plugin.thread_tabs)
                 
     def thread_view(self,request,thread,context=None):
         """
@@ -99,15 +113,34 @@ class PluginRegistry():
             context['plugins_overview_templates'] = self.overview_templates
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
-            if  plugin.threads_overview :
+            try :
                 plugin.threads_overview(request,threads,context)
+            except:
+                ""
+
+
     def thread_index(self,request,thread,context):
+    	"""
+    	used in thread.thread_index view
+    	Load plugins additional data for context
+    	
+    	populates tabs from plugins in the template thread.html
+    	
+    	tab plugin definition is an optional attribute of plugin object named thread_tabs
+    	and containing an array with 2 members :
+    	First : the tag label
+    	Second : the tag ajax url on a defined destination
+    	
+    	"""
+    	if context != None and 'plugins_thread_tabs' not in context:
+            context['plugins_thread_tabs'] = self.thread_tabs
+            print repr(self.thread_tabs)
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
             try:
                 plugin.thread_index(request,thread,context)
             except:
-                pass
+                ""
     
     def message_view(self,request,message,context=None):
         """
@@ -117,13 +150,24 @@ class PluginRegistry():
             context['plugins_message_templates'] = self.message_templates
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
-            if plugin.message_view :
+            try:
                 plugin.message_view(request,message,context)
+            except:
+                ""
                 
     def plugins_list():
         pass
 
-pluginRegistry = PluginRegistry()
+
+hyperkitty.pluginRegistry = None
+pluginRegistry = None
+def getPluginRegistry():
+    global pluginRegistry
+    if hyperkitty.pluginRegistry == None:
+        hyperkitty.pluginRegistry = PluginRegistry()
+        pluginRegistry = hyperkitty.pluginRegistry
+    return hyperkitty.pluginRegistry
+
 
 class PluginMeta(type):
     """
@@ -132,7 +176,8 @@ class PluginMeta(type):
     def __init__(self, name, bases, attrs):
         super(PluginMeta, self).__init__(name, bases, attrs)
         if name != "IPlugin":
-            pluginRegistry.register(name, self,attrs)
+            print 'registering META ' + name
+            getPluginRegistry().register(name, self,attrs)
             
     def __call__(cls, *args, **kwds):
         
@@ -149,12 +194,9 @@ class IPlugin():
 
 # Load external plugins
 
-for pluginModule in settings.HYPERKITTY_PLUGINS:
-    print 'loading ' + pluginModule
-    __import__(pluginModule)
-
-#Initialize all plugins
-pluginRegistry.init_plugins()
+#for pluginModule in settings.HYPERKITTY_PLUGINS:
+#    print 'loading module for ' + pluginModule
+#    __import__(pluginModule)
 
     
     
