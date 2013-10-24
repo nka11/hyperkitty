@@ -114,4 +114,5 @@ class Archiver(object):
         msg.message_id_hash = self.store.add_to_list(mlist, msg)
         self.store.commit()
         # TODO: Update karma
+        # TODO; entry point for plugins who whants to parse at reception
         return msg.message_id_hash

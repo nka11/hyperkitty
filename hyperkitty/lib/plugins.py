@@ -151,9 +151,10 @@ class PluginRegistry():
         for pluginName in self.plugins.keys():
             plugin = self.plugins[pluginName]
             try:
+                print "calling message_view of plugin %s" % pluginName
                 plugin.message_view(request,message,context)
             except:
-                ""
+                print "calling of message_view for plugin %s failed" % pluginName
                 
     def plugins_list():
         pass
