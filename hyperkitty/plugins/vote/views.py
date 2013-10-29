@@ -8,6 +8,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.template import RequestContext, loader
 from django.http import HttpResponse, Http404
 from django.contrib.auth.decorators import login_required
+from hyperkitty.lib.mailman import check_mlist_private
 
 @login_required
 def votes(request):
@@ -27,6 +28,7 @@ def votes(request):
                 "votes": votes,
             })
             
+@check_mlist_private
 def message_vote(request, mlist_fqdn, message_id_hash):
     """ Add a rating to a given message identified by messageid. HTTP POST Handler """
     if request.method != 'POST':

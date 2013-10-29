@@ -34,9 +34,11 @@ from django.contrib.auth.decorators import login_required
 from hyperkitty.lib import get_store
 from hyperkitty.lib.view_helpers import get_months
 from hyperkitty.lib.posting import post_to_list, PostingFailed
+from hyperkitty.lib.mailman import check_mlist_private
 from forms import ReplyForm, PostForm
 from hyperkitty.lib.plugins import pluginRegistry
 
+@check_mlist_private
 def index(request, mlist_fqdn, message_id_hash):
     '''
     Displays a single message identified by its message_id_hash (derived from
@@ -61,6 +63,7 @@ def index(request, mlist_fqdn, message_id_hash):
     return render(request, "message.html", context)
 
 
+@check_mlist_private
 def attachment(request, mlist_fqdn, message_id_hash, counter, filename):
     """
     Sends the numbered attachment for download. The filename is not used for
@@ -86,6 +89,7 @@ def attachment(request, mlist_fqdn, message_id_hash, counter, filename):
     return response
 
 @login_required
+@check_mlist_private
 def reply(request, mlist_fqdn, message_id_hash):
     """ Sends a reply to the list.
     TODO: unit tests
@@ -130,6 +134,7 @@ def reply(request, mlist_fqdn, message_id_hash):
 
 
 @login_required
+@check_mlist_private
 def new_message(request, mlist_fqdn):
     """ Sends a new thread-starting message to the list.
     TODO: unit tests

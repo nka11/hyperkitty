@@ -36,12 +36,20 @@ from hyperkitty.lib import get_store
 from hyperkitty.lib.plugins import pluginRegistry
 from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate, \
         get_category_widget, get_months, get_display_dates, daterange
+from hyperkitty.lib.mailman import check_mlist_private
 
 
 if settings.USE_MOCKUPS:
     from hyperkitty.lib.mockup import generate_top_author, generate_thread_per_category
 
 
+Thread = namedtuple('Thread', [
+    "thread_id", "subject", "participants", "length", "date_active",
+    "likes", "dislikes", "likestatus", "category", "unread",
+    ])
+
+
+@check_mlist_private
 def archives(request, mlist_fqdn, year=None, month=None, day=None):
     if year is None and month is None:
         today = datetime.date.today()
@@ -129,6 +137,7 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
 class C:
     pass
 
+@check_mlist_private
 def overview(request, mlist_fqdn=None):
     if not mlist_fqdn:
         return redirect('/')

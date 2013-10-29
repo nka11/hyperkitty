@@ -31,6 +31,7 @@ from hyperkitty.lib.plugins import pluginRegistry
 
 
 from hyperkitty.views.list import _thread_list
+from hyperkitty.lib.mailman import check_mlist_private, is_mlist_authorized
 
 
 class SearchPaginator(Paginator):
@@ -47,6 +48,7 @@ class SearchPaginator(Paginator):
         return Page(self.object_list, number, self)
 
 
+@check_mlist_private
 def search_tag(request, mlist_fqdn, tag):
     '''Returns threads having a particular tag'''
     store = get_store(request)
@@ -85,6 +87,13 @@ def search(request, page=1):
         mlist = store.get_list(mlist_fqdn)
         if mlist is None:
             raise Http404("No archived mailing-list by that name.")
+        if not is_mlist_authorized(request, mlist):
+            return render(request, "error-private.html", {
+                            "mlist": mlist,
+                          }, status=403)
+
+    if not store.search_index:
+        return render(request, "error-nosearch.html", {"mlist": mlist})
 
     if not query:
         return render(request, "search_results.html", {
