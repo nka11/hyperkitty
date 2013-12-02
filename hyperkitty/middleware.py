@@ -94,7 +94,10 @@ class SSLRedirect(object):
         if request.user.is_authenticated():
             secure = True
         if not settings.USE_SSL: # User-disabled (e.g: development server)
+            if SSL in view_kwargs:
+                del view_kwargs[SSL]
             secure = False
+            
 
         if not secure == self._is_secure(request):
             return self._redirect(request, secure)
