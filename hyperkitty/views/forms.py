@@ -62,8 +62,9 @@ class RegistrationForm(forms.Form):
 
 
 class UserProfileForm(forms.Form):
-    first_name = forms.CharField()
-    last_name = forms.CharField()
+    username = forms.CharField(required=True,validators=[isValidUsername])
+    #first_name = forms.CharField(required=False)
+    display_name = forms.CharField(required=False)
     timezone = forms.ChoiceField(label="Time zone",
                                  choices=UserProfile.TIMEZONES)
 
