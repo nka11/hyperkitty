@@ -145,7 +145,7 @@ class TimezoneMiddleware(object):
 
 from mailmanclient import Client as MailmanClient
 from mailmanclient import MailmanConnectionError
-
+from urllib2 import HTTPError
 class MailmanUserMetadata(object):
 
     session_key = "subscribed"
@@ -163,6 +163,11 @@ class MailmanUserMetadata(object):
                     settings.MAILMAN_API_PASS)
         try:
             user = client.get_user(request.user.email)
+        except HTTPError, err:
+            if err.code == 404:
+                user = client.create_user(request.user.email,"")
+            else:
+                return
         except MailmanConnectionError:
             return
         request.session[self.session_key] = \
