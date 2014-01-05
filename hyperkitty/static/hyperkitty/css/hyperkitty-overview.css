@@ -12,50 +12,6 @@
     margin-top: 0;
 }
 
-#chart-data rect {
-    cursor: pointer;
-}
-
-#fig, #chart-data {
-  position: relative;
-  margin: auto;
-  font-size: 8pt;
-  font-family: "Droid Sans", sans-serf;
-  font-color: #777;
-}
-
-
-#fig .axis path, #fig .axis line,
-#chart-data .axis path, #chart-data .axis line {
-/*
-  fill: none;
-  stroke: #bbb;
-  shape-rendering: geometricPrecision;
-*/
-  display: none;
-}
-
-#fig .area,
-#chart-data .bars rect {
-  fill: steelBlue;
-}
-
-
-/* Next 2 blocks for grid lines */
-
-/*
-#fig .grid .tick,
-#chart-data .grid .tick {
-    stroke: lightgrey;
-    opacity: 0.3;
-}
-
-#fig .grid path,
-#chart-data .grid path {
-    stroke-width: 0;
-}
-*/
-
 /*
 #overview .widget {
     padding: 1em;
@@ -117,7 +73,7 @@
     font-weight: bold;
     font-size: 115%;
     vertical-align: top;
-    padding-right: 20px;
+    padding-right: 3px;
 }
 
 .maker .gravatar {
@@ -163,18 +119,17 @@ section#title #description {
   font-weight: normal;
 }
 
-section#title svg {
-  padding-top: 3px;
-  border: 1px solid #bbb;
+section#title .chart {
+  margin-top: 1.5em;
+  height: 60px;
 }
-
-section#title #chart {
-  margin-top: 2em;
+section#title .chart-data {
+  border: 1px solid #bbb;
 }
 
 section#title p.thread-new {
   text-align: left;
-  margin-top: 1em;
+  margin-top: 2em;
 }
 
 section#statistics {
@@ -226,32 +181,34 @@ section#statistics h3 {
 }
 
 /* this needs to be integrated into hyperkitty-threadslist.css eventually */
-div.thread {
+
+#overview div.thread {
   border: 1px solid #e5e5e5;
   padding: 1%;
-  margin: .5% !important;
+  margin: .5%;
 }
 
-.thread {
+#overview .thread {
   min-height: 1.2em;
 }
 
-.widget {
+#overview .widget {
   clear: both;
   margin-bottom: 2em;
 }
 
-.thread ul.inline-block {
+#overview .thread ul.inline-block {
   width: 28%;
 }
 
-.thread ul.inline-block li,
-.thread ul.inline-block span {
+#overview .thread ul.inline-block li,
+#overview .thread ul.inline-block span {
   text-align: left;
   min-width: 6.5%;
 }
 
-.thread-title {
+
+#overview .thread-title {
   width: 68%;
   float: left;
   white-space: nowrap;
@@ -261,14 +218,26 @@ div.thread {
 }
 
 
-.maker-name, .maker-id {
+
+#overview .maker-name, .maker-id {
   font-size: small;
 }
 
-.maker-id {
+#overview .maker-id {
   color: #aaa;
 }
 
-.thread-id {
+#overview .thread-id {
   float: left;
 }
+
+#overview .maker-name {
+  display: block !important;
+  max-width: 152px !important;
+  word-wrap: break-word !important;
+}
+
+#overview .maker .gravatar {
+  padding-right: 5px;
+}
+

@@ -20,9 +20,10 @@
 #
 
 from django.conf.urls import patterns, include, url
-from helpers import is_thread_unread
 from hyperkitty.lib import get_store
+import hyperkitty.models
 from hyperkitty.models import LastView
+from helpers import is_thread_unread
 from hyperkitty.lib.plugins import IPlugin
 import os
 templatesdir = os.path.join(os.path.abspath(os.path.dirname(__file__)),'templates')

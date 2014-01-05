@@ -17,7 +17,7 @@
 # HyperKitty.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Author: Aamir Khan <syst3m.w0rm@gmail.com>
-#
+# 
 
 import logging
 from urllib2 import HTTPError
@@ -41,8 +41,9 @@ import mailmanclient
 from hyperkitty.models import UserProfile, Favorite, LastView
 from hyperkitty.views.forms import RegistrationForm, UserProfileForm
 from hyperkitty.lib import get_store
-from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate
-from hyperkitty.lib.mailman import get_subscriptions
+from hyperkitty.lib.view_helpers import FLASH_MESSAGES
+from hyperkitty.lib.paginator import paginate
+from hyperkitty.lib.mailman import get_subscriptions, is_mlist_authorized
 
 #XXX Extract vote features from accounts views (make plugin entryPoint for this view)
 #from hyperkitty.plugins.vote.models import Rating
@@ -90,23 +91,24 @@ def user_profile(request):
     if request.method == 'POST':
         form = UserProfileForm(request.POST)
         if form.is_valid():
-            request.user.first_name = form.cleaned_data["first_name"]
-            request.user.last_name = form.cleaned_data["last_name"]
+            #request.user.first_name = form.cleaned_data["first_name"]
+            request.user.last_name = form.cleaned_data["display_name"]
+            request.user.username = form.cleaned_data["username"]
             user_profile.timezone = form.cleaned_data["timezone"]
             request.user.save()
             user_profile.save()
             # Now update the display name in Mailman
             if mm_user is not None:
-                mm_user.display_name = "%s %s" % (
-                        request.user.first_name, request.user.last_name)
+                mm_user.display_name = "%s" % (request.user.last_name)
                 mm_user.save()
             redirect_url = reverse('user_profile')
             redirect_url += "?msg=updated-ok"
             return redirect(redirect_url)
     else:
         form = UserProfileForm(initial={
-                "first_name": request.user.first_name,
-                "last_name": request.user.last_name,
+                "username": request.user.username,
+#                "first_name": request.user.first_name,
+                "display_name": request.user.last_name,
                 "timezone": get_current_timezone(),
                 })
 
@@ -138,12 +140,19 @@ def user_profile(request):
                       "msg": FLASH_MESSAGES[flash_msg][1] }
         flash_messages.append(flash_msg)
 
+    # Extract the gravatar_url used by django_gravatar2.  The site
+    # administrator could alternatively set this to http://cdn.libravatar.org/
+    gravatar_url = getattr(settings, 'GRAVATAR_URL', 'http://www.gravatar.com')
+    gravatar_shortname = '.'.join(gravatar_url.split('.')[-2:]).strip('/')
+
     context = {
         'user_profile' : user_profile,
         'form': form,
         'emails': emails,
         'favorites': favorites,
         'flash_messages': flash_messages,
+        'gravatar_url': gravatar_url,
+        'gravatar_shortname': gravatar_shortname,
     }
     return render(request, "user_profile.html", context)
 
@@ -270,3 +279,55 @@ def public_profile(request, user_id):
     pluginRegistry.processSubscriptions(subscriptions, context)
     
     return render(request, "user_public_profile.html", context)
+
+
+def posts(request, user_id):
+    store = get_store(request)
+    mlist_fqdn = request.GET.get("list")
+    sort_mode = request.GET.get('sort')
+    if mlist_fqdn is None:
+        mlist = None
+        return HttpResponse("Not implemented yet", status=500)
+    else:
+        mlist = store.get_list(mlist_fqdn)
+        if mlist is None:
+            raise Http404("No archived mailing-list by that name.")
+        if not is_mlist_authorized(request, mlist):
+            return render(request, "errors/private.html", {
+                            "mlist": mlist,
+                          }, status=403)
+
+    # Get the user's full name
+    try:
+        client = mailmanclient.Client('%s/3.0' %
+                    settings.MAILMAN_REST_SERVER,
+                    settings.MAILMAN_API_USER,
+                    settings.MAILMAN_API_PASS)
+        mm_user = client.get_user(user_id)
+    except HTTPError:
+        raise Http404("No user with this ID: %s" % user_id)
+    except mailmanclient.MailmanConnectionError:
+        fullname = None
+    else:
+        fullname = mm_user.display_name
+    if not fullname:
+        fullname = store.get_sender_name(user_id)
+
+    # Get the messages and paginate them
+    messages = store.get_messages_by_user_id(user_id, mlist_fqdn)
+    try:
+        page_num = int(request.GET.get('page', "1"))
+    except ValueError:
+        page_num = 1
+    messages = paginate(messages, page_num)
+
+    for message in messages:
+        set_message_votes(message, request.user)
+
+    context = {
+        'user_id': user_id,
+        'mlist' : mlist,
+        'messages': messages,
+        'fullname': fullname,
+    }
+    return render(request, "user_posts.html", context)

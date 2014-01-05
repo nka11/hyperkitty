@@ -38,9 +38,7 @@ from hyperkitty.views import TextTemplateView
 
 urlpatterns = patterns('hyperkitty.views',
     # Index
-    url(r'^/$', 'pages.index', name='index'),
-    url(r'^$', 'pages.index', name='root'),
-    url(r'^lists-properties$', 'pages.list_properties', name='list_properties'),
+    url(r'^/?$', 'index.index', name='root'),
 
     # Account
     url(r'^accounts/login/$', 'accounts.login_view', {'template_name': 'login.html', 'SSL': True}, name='user_login'),
@@ -52,6 +50,7 @@ urlpatterns = patterns('hyperkitty.views',
 
     # Users
     url(r'^user/(?P<user_id>[^/]+)/$', 'accounts.public_profile', name='public_user_profile'),
+    url(r'^user/(?P<user_id>[^/]+)/posts$', 'accounts.posts', name='user_posts'),
 
     # List archives and overview
     url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/(?P<year>\d{4})/(?P<month>\d\d?)/(?P<day>\d\d?)/$',
@@ -62,6 +61,8 @@ urlpatterns = patterns('hyperkitty.views',
         'list.archives', name='archives_latest'),
     url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/$',
         'list.overview', name='list_overview'),
+    url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/recent-activity$',
+        'list.recent_activity', name='list_recent_activity'),
 
     # Message
     url(r'^list/(?P<mlist_fqdn>[^/@]+@[^/@]+)/message/(?P<message_id_hash>\w+)/$',
@@ -111,11 +112,15 @@ urlpatterns = patterns('hyperkitty.views',
         SearchResource.as_view(), name="api_search"),
     url(r'^api/tag\/', TagResource.as_view(), name="api_tag"),
 
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    # Errors
+    url(r'^error/schemaupgrade$',
+        TemplateView.as_view(template_name="errors/schemaupgrade.html"),
+        name="error_schemaupgrade"),
 
     # Admin
     url(r'^admin/', include(admin.site.urls), {"SSL": True}),
+    # Uncomment the admin/doc line below to enable admin documentation:
+    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
     # Robots.txt
     url(r'^robots\.txt$', TextTemplateView.as_view(template_name="robots.txt")),

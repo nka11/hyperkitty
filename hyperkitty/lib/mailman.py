@@ -29,11 +29,13 @@ from django.utils.http import urlquote
 from django.utils.decorators import available_attrs
 from django.shortcuts import redirect, render
 from django.http import Http404
+from django.core.cache import cache
 from mailman.interfaces.archiver import ArchivePolicy
 from mailmanclient import Client
 
 from hyperkitty.plugins.vote.models import Rating
 from hyperkitty.lib import get_store
+from hyperkitty.plugins.vote.voting import get_votes
 
 
 def subscribe(list_address, user):
@@ -59,21 +61,17 @@ def get_subscriptions(store, client, mm_user):
         # de-duplicate subscriptions
         if mlist in [ s["list_name"] for s in subscriptions ]:
             continue
-        email_hashes = store.get_message_hashes_by_user_id(
+        posts_count = store.get_message_count_by_user_id(
                 mm_user.user_id, mlist)
-        try: # Compute the average vote value
-            votes = Rating.objects.filter(list_address=mlist,
-                                          messageid__in=email_hashes)
-        except Rating.DoesNotExist:
-            votes = []
-        likes = dislikes = 0
-        for v in votes:
-            if v.vote == 1:
-                likes += 1
-            elif v.vote == -1:
-                dislikes += 1
-        all_posts_url = "%s?list=%s&query=user_id:%s" % \
-                (reverse("search"), mlist, urlquote(mm_user.user_id))
+        cache_key = "user:%s:list:%s:votes" % (mm_user.user_id, mlist)
+        likes, dislikes = cache.get(cache_key, (None, None))
+        if likes is None or dislikes is None or posts_count is None:
+            email_hashes = store.get_message_hashes_by_user_id(
+                    mm_user.user_id, mlist)
+            likes, dislikes, _myvote = get_votes(mlist, email_hashes)
+            cache.set(cache_key, (likes, dislikes))
+        all_posts_url = "%s?list=%s" % \
+                (reverse("user_posts", args=[mm_user.user_id]), mlist)
         likestatus = "neutral"
         if likes - dislikes >= 10:
             likestatus = "likealot"
@@ -86,7 +84,7 @@ def get_subscriptions(store, client, mm_user):
             "dislikes": dislikes,
             "likestatus": likestatus,
             "all_posts_url": all_posts_url,
-            "posts_count": len(email_hashes),
+            "posts_count": posts_count,
         })
     return subscriptions
 
@@ -108,7 +106,7 @@ def check_mlist_private(func):
             raise Http404("No archived mailing-list by that name.")
         #return HttpResponse(request.session.get("subscribed", "NO KEY"), content_type="text/plain")
         if not is_mlist_authorized(request, mlist):
-            return render(request, "error-private.html", {
+            return render(request, "errors/private.html", {
                             "mlist": mlist,
                           }, status=403)
         return func(request, *args, **kwargs)

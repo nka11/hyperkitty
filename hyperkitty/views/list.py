@@ -23,30 +23,28 @@
 import datetime
 from collections import namedtuple, defaultdict
 
+import django.utils.simplejson as json
 from django.shortcuts import redirect, render
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.utils import formats
 from django.utils.dateformat import format as date_format
 from django.utils.timezone import utc
-from django.http import Http404
+from django.http import Http404, HttpResponse
 
 from hyperkitty.models import Tag, Favorite
 from hyperkitty.lib import get_store
 from hyperkitty.lib.plugins import pluginRegistry
-from hyperkitty.lib.view_helpers import FLASH_MESSAGES, paginate, \
-        get_category_widget, get_months, get_display_dates, daterange
+from hyperkitty.lib.view_helpers import FLASH_MESSAGES, \
+        get_category_widget, get_months, get_display_dates, daterange, \
+        is_thread_unread, get_recent_list_activity
+from hyperkitty.lib.paginator import paginate
 from hyperkitty.lib.mailman import check_mlist_private
 
 
 if settings.USE_MOCKUPS:
     from hyperkitty.lib.mockup import generate_top_author, generate_thread_per_category
 
-
-Thread = namedtuple('Thread', [
-    "thread_id", "subject", "participants", "length", "date_active",
-    "likes", "dislikes", "likestatus", "category", "unread",
-    ])
 
 
 @check_mlist_private
@@ -76,6 +74,9 @@ def archives(request, mlist_fqdn, year=None, month=None, day=None):
         "list_title": list_title.capitalize(),
         "no_results_text": no_results_text,
     }
+    if day is None:
+        month_activity = mlist.get_month_activity(int(year), int(month))
+        extra_context["participants"] = month_activity.participants_count
     return _thread_list(request, mlist, threads, extra_context=extra_context)
 
 
@@ -84,14 +85,18 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
         raise Http404("No archived mailing-list by that name.")
     store = get_store(request)
 
+    threads = paginate(threads, request.GET.get('page'))
+
     participants = set()
     for thread in threads:
-        participants.update(thread.participants)
-        
+        if "participants" not in extra_context:
+            participants.update(thread.participants)
+
         # Plugins
         pluginRegistry.thread_view(request, thread, extra_context)
 
         # Favorites XXX to plugin
+
         thread.favorite = False
         if request.user.is_authenticated():
             try:
@@ -113,8 +118,8 @@ def _thread_list(request, mlist, threads, template_name='thread_list.html', extr
         # Category XXX to plugin
         thread.category_hk, thread.category_form = \
                 get_category_widget(request, thread.category)
-
-    threads = paginate(threads, request.GET.get('page'))
+        # Unread status
+        thread.unread = is_thread_unread(request, mlist.name, thread)
 
     flash_messages = []
     flash_msg = request.GET.get("msg")
@@ -142,17 +147,11 @@ def overview(request, mlist_fqdn=None):
     if not mlist_fqdn:
         return redirect('/')
 
-    # Get stats for last 30 days
-    today = datetime.datetime.utcnow()
-    #today -= datetime.timedelta(days=365) #debug
-    # the upper boundary is excluded in the search, add one day
-    end_date = today + datetime.timedelta(days=1)
-    begin_date = end_date - datetime.timedelta(days=32)
-
     store = get_store(request)
     mlist = store.get_list(mlist_fqdn)
     if mlist is None:
         raise Http404("No archived mailing-list by that name.")
+    begin_date, end_date = mlist.get_recent_dates()
     threads_result = store.get_threads(
             list_name=mlist.name, start=begin_date, end=end_date)
 
@@ -169,16 +168,25 @@ def overview(request, mlist_fqdn=None):
         thrd.length = len(thread_obj)
         thrd.participants = thread_obj.participants
         thrd.date_active = thread_obj.date_active.replace(tzinfo=utc)
+        thrd.unread = is_thread_unread(request, mlist.name, thread_obj)
+        thrd.list_name = mlist.name
         # XXX move to plugins
         thrd.category = get_category_widget(None, thread_obj.category)[0]
         pluginRegistry.thread_view(request, thrd, extra_context)
-        thread = Thread(**thrd.__dict__)
+        try:
+            # cleaned
+            del thrd.list_name
+            thread = Thread(**thrd.__dict__)
+        except Exception as e:
+            print pluginRegistry.thread_indexes
+            print thrd.__dict__
+            raise e
         # Statistics on how many participants and threads this month
         participants.update(thread.participants)
         threads.append(thread)
 
     # top threads are the one with the most answers
-    top_threads = sorted(threads, key=lambda t: t.length, reverse=True)
+    top_threads = sorted(threads, key=lambda t: len(t), reverse=True)
 
     # active threads are the ones that have the most recent posting
     active_threads = sorted(threads, key=lambda t: t.date_active, reverse=True)
@@ -213,29 +221,6 @@ def overview(request, mlist_fqdn=None):
             continue
         threads_by_category[thread.category].append(thread)
 
-    # List activity
-    # Use get_messages and not get_threads to count the emails, because
-    # recently active threads include messages from before the start date
-    emails_in_month = store.get_messages(list_name=mlist.name,
-                                         start=begin_date, end=end_date)
-    # graph
-    dates = defaultdict(lambda: 0) # no activity by default
-    # populate with all days before adding data.
-    for single_date in daterange(begin_date, end_date):
-        dates[single_date.strftime("%Y-%m-%d")] = 0
-
-    for email in emails_in_month:
-        date_str = email.date.strftime("%Y-%m-%d")
-        dates[date_str] = dates[date_str] + 1
-    days = dates.keys()
-    days.sort()
-    evolution = [dates[d] for d in days]
-    if not evolution:
-        evolution.append(0)
-    archives_baseurl = reverse("archives_latest",
-                               kwargs={'mlist_fqdn': mlist.name})
-    archives_baseurl = archives_baseurl.rpartition("/")[0]
-
     context = {
         'view_name': 'overview',
         'mlist' : mlist,
@@ -244,11 +229,15 @@ def overview(request, mlist_fqdn=None):
         'top_posters': top_posters,
         'threads_by_category': threads_by_category,
         'months_list': get_months(store, mlist.name),
-        'evolution': evolution,
-        'days': days,
-        'archives_baseurl': archives_baseurl,
-        'num_threads': len(threads),
-        'num_participants': len(participants),
     }
     context.update(extra_context)
     return render(request, "overview.html", context)
+
+
+@check_mlist_private
+def recent_activity(request, mlist_fqdn):
+    store = get_store(request)
+    mlist = store.get_list(mlist_fqdn)
+    evolution = get_recent_list_activity(store, mlist)
+    return HttpResponse(json.dumps({"evolution": evolution}),
+                        content_type='application/javascript')

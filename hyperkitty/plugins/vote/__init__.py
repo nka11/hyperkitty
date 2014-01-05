@@ -50,7 +50,7 @@ class VotePlugin(IPlugin):
         set_message_votes(message, request.user)
     
     def thread_view(self,request,thread,context):
-        set_thread_votes(thread,request.user)
+        set_thread_votes(thread)
     def threads_overview(self,request,threads,context):
         context['pop_threads'] = sorted([ t for t in threads if t.likes - t.dislikes > 0 ],
              key=lambda t: t.likes - t.dislikes,

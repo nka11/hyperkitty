@@ -35,7 +35,7 @@ class PluginRegistry():
     message_templates = []
     thread_templates = []
     overview_templates = []
-    thread_indexes = [    "thread_id","email_id_hashes", "subject", "participants", "length", "date_active",
+    thread_indexes = [   "unread", "thread_id","email_id_hashes", "subject", "participants", "length", "date_active",
              "category", 
                 ]
     def __init__(self):
@@ -74,7 +74,7 @@ class PluginRegistry():
             else:
                 self.urls = self.plugins[pluginClass].urls
         except:
-        	""
+            ""
         if 'message_templates' in plugin.__dict__.keys():
             self.message_templates.extend(plugin.message_templates)
         if 'thread_template' in plugin.__dict__.keys():
@@ -96,8 +96,8 @@ class PluginRegistry():
             plugin = self.plugins[pluginName]
             try:
                 plugin.thread_view(request,thread,context)
-            except:
-                pass
+            except Exception as e:
+                raise e
     
     def process_subscriptions(self,subscriptions,context):
         '''

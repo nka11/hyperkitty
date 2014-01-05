@@ -1,7 +1,6 @@
 from voting import set_message_votes
 from models import Rating
 from hyperkitty.lib import get_store
-from hyperkitty.lib.view_helpers import paginate
 from django.shortcuts import render
 import django.utils.simplejson as json
 from django.core.exceptions import SuspiciousOperation
@@ -17,7 +16,6 @@ def votes(request):
         votes = Rating.objects.filter(user=request.user)
     except Rating.DoesNotExist:
         votes = []
-    votes = paginate(votes, request.GET.get('vpage'))
     for vote in votes:
         vote.message = store.get_message_by_hash_from_list(
                 vote.list_address, vote.messageid)

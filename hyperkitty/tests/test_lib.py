@@ -21,9 +21,16 @@
 
 import datetime
 
-from hyperkitty.tests.utils import TestCase
+from django.contrib.auth.models import User, AnonymousUser
+from django.core.cache import cache
+from django.http import HttpRequest
 
-from hyperkitty.lib.view_helpers import get_display_dates, paginate
+from hyperkitty.models import Rating
+from hyperkitty.lib.view_helpers import get_display_dates, show_mlist
+from hyperkitty.lib.voting import set_thread_votes
+from hyperkitty.lib.paginator import paginate
+
+from hyperkitty.tests.utils import TestCase
 
 
 class GetDisplayDatesTestCase(TestCase):
@@ -95,3 +102,115 @@ class PaginateTestCase(TestCase):
                          [1, '...', 96, 97, 98, 99, 100])
         self.assertEqual(paginate(objects, 100).page_range,
                          [1, '...', 97, 98, 99, 100])
+
+
+
+#
+# Voting
+#
+
+class DummyThread(object):
+    thread_id = "dummy"
+    list_name = "test@example.com"
+    email_id_hashes = []
+    @property
+    def emails_count(self):
+        return len(email_id_hashes)
+
+class VotingTestCase(TestCase):
+
+    def setUp(self):
+        self.thread = DummyThread()
+        self.user = User.objects.create_user('testuser', 'test@example.com', 'testPass')
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_msg1(self):
+        # First message in thread is voted for
+        self.thread.email_id_hashes = ["msg1", "msg2", "msg3"]
+        Rating(list_address=self.thread.list_name, messageid="msg1",
+               user=self.user, vote=1).save()
+        set_thread_votes(self.thread)
+        self.assertEqual(self.thread.likes, 1)
+        self.assertEqual(self.thread.dislikes, 0)
+        self.assertEqual(self.thread.likestatus, "like")
+
+    def test_msg2(self):
+        # Second message in thread is voted against
+        self.thread.email_id_hashes = ["msg1", "msg2", "msg3"]
+        Rating(list_address=self.thread.list_name, messageid="msg2",
+               user=self.user, vote=-1).save()
+        set_thread_votes(self.thread)
+        self.assertEqual(self.thread.likes, 0)
+        self.assertEqual(self.thread.dislikes, 1)
+        self.assertEqual(self.thread.likestatus, "neutral")
+
+    def test_likealot(self):
+        # All messages in thread are voted for
+        self.thread.email_id_hashes = [ "msg%s" % num for num in range(1, 11) ]
+        for msgid in self.thread.email_id_hashes:
+            Rating(list_address=self.thread.list_name, messageid=msgid,
+                   user=self.user, vote=1).save()
+        set_thread_votes(self.thread)
+        self.assertEqual(self.thread.likes, 10)
+        self.assertEqual(self.thread.dislikes, 0)
+        self.assertEqual(self.thread.likestatus, "likealot")
+
+    def test_same_msgid_different_lists(self):
+        thread_1 = DummyThread()
+        thread_1.list_name = "test1@example.com"
+        thread_2 = DummyThread()
+        thread_2.list_name = "test2@example.com"
+        thread_1.email_id_hashes = thread_2.email_id_hashes = ["msgid"]
+        Rating(list_address="test1@example.com", messageid="msgid",
+               user=self.user, vote=1).save()
+        Rating(list_address="test2@example.com", messageid="msgid",
+               user=self.user, vote=1).save()
+        set_thread_votes(thread_1)
+        self.assertEqual(thread_1.likes, 1)
+        self.assertEqual(thread_1.dislikes, 0)
+        set_thread_votes(thread_2)
+        self.assertEqual(thread_2.likes, 1)
+        self.assertEqual(thread_2.dislikes, 0)
+
+
+#
+# view_helpers.show_mlist()
+#
+
+class FakeKSList(object):
+    def __init__(self, name):
+        self.name = name
+
+class ShowMlistTestCase(TestCase):
+
+    def _do_test(self, listdomain, vhost, expected):
+        mlist = FakeKSList("test@%s" % listdomain)
+        req = HttpRequest()
+        req.META["HTTP_HOST"] = vhost
+        self.assertEqual(show_mlist(mlist, req), expected)
+
+    def test_same_domain(self):
+        self._do_test("example.com", "example.com", True)
+        self._do_test("lists.example.com", "lists.example.com", True)
+
+    def test_web_subdomain(self):
+        self._do_test("example.com", "www.example.com", True)
+        self._do_test("example.com", "lists.example.com", True)
+
+    def test_mail_subdomain(self):
+        self._do_test("lists.example.com", "example.com", True)
+
+    def test_different_subdomains(self):
+        self._do_test("lists.example.com", "archives.example.com", True)
+
+    def test_different_domains(self):
+        self._do_test("example.com", "another-example.com", False)
+        self._do_test("lists.example.com", "archives.another-example.com", False)
+
+    def test_single_component_domain(self):
+        self._do_test("intranet", "intranet", True)
+
+    def test_different_single_component_domain(self):
+        self._do_test("intranet", "extranet", False)

@@ -40,43 +40,57 @@ from kittystore.test import FakeList, SettingsModule
 
 from hyperkitty.models import Rating, LastView
 
+from hyperkitty.views.accounts import user_profile, user_registration
+
+
+def genericAssertRedirects(self, response, target):
+    # A version of assertRedirects that works with view responses
+    if hasattr(response, "client"):
+        return TestCase.assertRedirects(self, response, target)
+    self.assertEqual(response.status_code, 302)
+    self.assertEqual(response._headers["location"][1], target)
+
 
 class AccountViewsTestCase(TestCase):
 
+    assertRedirects = genericAssertRedirects
+
     def setUp(self):
-        self.client = Client()
+        store = kittystore.get_store(SettingsModule(),
+                                     debug=False, auto_create=True)
+        defaults = {"kittystore.store": store, "HTTP_USER_AGENT": "testbot"}
+        self.factory = RequestFactory(**defaults)
 
     def test_login(self):
         # Try to access user profile (private data) without logging in
-        response = self.client.get(reverse('user_profile'))
-        self.assertRedirects(response, "%s?next=%s" % (reverse('user_login'), reverse('user_profile')))
+        request = self.factory.get(reverse(user_profile))
+        request.user = AnonymousUser()
+        response = user_profile(request)
+        self.assertRedirects(response,
+                "%s?next=%s" % (reverse('user_login'), reverse(user_profile)))
 
     def test_profile(self):
-        User.objects.create_user('testuser', 'test@example.com', 'testPass')
-        self.client.login(username='testuser', password='testPass')
-
-        response = self.client.get(reverse('user_profile'))
+        request = self.factory.get(reverse(user_profile))
+        request.user = User.objects.create_user('testuser', 'test@example.com', 'testPass')
+        response = user_profile(request)
         self.assertEqual(response.status_code, 200)
 
-        # Verify that user_profile is present in request context
-        self.assertTrue('user_profile' in response.context)
-
-        # Verify karma for newly created user is 1
-        self.assertEqual(response.context['user_profile'].karma, 1)
-
-
     def test_registration(self):
-        User.objects.create_user('testuser', 'test@example.com', 'testPass')
-        self.client.login(username='testuser', password='testPass')
+        request = self.factory.get(reverse(user_registration))
+        request.user = User.objects.create_user('testuser', 'test@example.com', 'testPass')
+        response = user_registration(request)
+        #self.client.login(username='testuser', password='testPass')
 
         # If the user if already logged in, redirect to index page...
         # Don't let him register again
-        response = self.client.get(reverse('user_registration'))
+        #response = self.client.get(reverse('user_registration'))
         self.assertRedirects(response, reverse('root'))
-        self.client.logout()
+        #self.client.logout()
+        request.user = AnonymousUser()
 
         # Access the user registration page after logging out and try to register now
-        response = self.client.get(reverse('user_registration'))
+        #response = self.client.get(reverse('user_registration'))
+        response = user_registration(request)
         self.assertEqual(response.status_code, 200)
 
         # @TODO: Try to register a user and verify its working
@@ -91,7 +105,7 @@ class LastViewsTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('testuser', 'test@example.com', 'testPass')
         self.client.login(username='testuser', password='testPass')
-        store = kittystore.get_store(SettingsModule(), debug=False)
+        store = kittystore.get_store(SettingsModule(), debug=False, auto_create=True)
         ml = FakeList("list@example.com")
         ml.subject_prefix = u"[example] "
         # Create 3 threads
@@ -169,6 +183,8 @@ class MessageViewsTestCase(TestCase):
             def __init__(self, h):
                 self.message_id_hash = h
                 self.list_name = "list@example.com"
+                self.thread_id = h
+                self.user_id = None
         self.store = Mock()
         self.store.get_message_by_hash_from_list.side_effect = \
                 lambda l, h: FakeMessage(h)
@@ -267,7 +283,7 @@ class ReattachTestCase(TestCase):
         self.user = User.objects.create_user('testuser', 'test@example.com', 'testPass')
         self.user.is_staff = True
         self.client.login(username='testuser', password='testPass')
-        self.store = kittystore.get_store(SettingsModule(), debug=False)
+        self.store = kittystore.get_store(SettingsModule(), debug=False, auto_create=True)
         ml = FakeList("list@example.com")
         ml.subject_prefix = u"[example] "
         # Create 2 threads
@@ -307,9 +323,9 @@ class ReattachTestCase(TestCase):
         request.user = self.user
         response = reattach(request, "list@example.com", threadid2)
         now = datetime.datetime.now()
-        threads = self.store.get_threads("list@example.com",
+        threads = list(self.store.get_threads("list@example.com",
                 now - datetime.timedelta(days=1),
-                now + datetime.timedelta(days=1))
+                now + datetime.timedelta(days=1)))
         self.assertEqual(len(threads), 1)
         self.assertEqual(threads[0].thread_id, threadid1)
         expected_url = reverse('thread', args=["list@example.com", threadid1]) + "?msg=attached-ok"
@@ -325,9 +341,9 @@ class ReattachTestCase(TestCase):
         request.user = self.user
         response = reattach(request, "list@example.com", threadid2)
         now = datetime.datetime.now()
-        threads = self.store.get_threads("list@example.com",
+        threads = list(self.store.get_threads("list@example.com",
                 now - datetime.timedelta(days=1),
-                now + datetime.timedelta(days=1))
+                now + datetime.timedelta(days=1)))
         self.assertEqual(len(threads), 1)
         self.assertEqual(threads[0].thread_id, threadid1)
         expected_url = reverse('thread', args=["list@example.com", threadid1]) + "?msg=attached-ok"
@@ -343,9 +359,9 @@ class ReattachTestCase(TestCase):
         response = reattach(request, "list@example.com", threadid)
         self.assertFalse(self.store.attach_to_thread.called)
         now = datetime.datetime.now()
-        threads = self.store.get_threads("list@example.com",
+        threads = list(self.store.get_threads("list@example.com",
                 now - datetime.timedelta(days=1),
-                now + datetime.timedelta(days=1))
+                now + datetime.timedelta(days=1)))
         self.assertEqual(len(threads), 2)
         errormsg = '<div class="flashmsgs"><div class="flashmsg-wrapper"><div class="alert alert-error">'
         self.assertContains(response, '<div class="alert alert-warning">',
@@ -362,9 +378,9 @@ class ReattachTestCase(TestCase):
         response = reattach(request, "list@example.com", threadid)
         self.assertFalse(self.store.attach_to_thread.called)
         now = datetime.datetime.now()
-        threads = self.store.get_threads("list@example.com",
+        threads = list(self.store.get_threads("list@example.com",
                 now - datetime.timedelta(days=1),
-                now + datetime.timedelta(days=1))
+                now + datetime.timedelta(days=1)))
         self.assertEqual(len(threads), 2)
         errormsg = '<div class="flashmsgs"><div class="flashmsg-wrapper"><div class="alert alert-error">'
         self.assertContains(response, '<div class="alert alert-warning">',
@@ -398,9 +414,9 @@ class ReattachTestCase(TestCase):
         response = reattach(request, "list@example.com", threadid1)
         self.assertFalse(self.store.attach_to_thread.called)
         now = datetime.datetime.now()
-        threads = self.store.get_threads("list@example.com",
+        threads = list(self.store.get_threads("list@example.com",
                 now - datetime.timedelta(days=1),
-                now + datetime.timedelta(days=1))
+                now + datetime.timedelta(days=1)))
         self.assertEqual(len(threads), 2)
         errormsg = '<div class="flashmsgs"><div class="flashmsg-wrapper"><div class="alert alert-error">'
         self.assertContains(response, '<div class="alert alert-error">',
@@ -424,7 +440,7 @@ class PrivateArchivesTestCase(TestCase):
         #self.client.login(username='testuser', password='testPass')
         settings = SettingsModule()
         settings.KITTYSTORE_SEARCH_INDEX = self.tmpdir
-        self.store = kittystore.get_store(settings, debug=False)
+        self.store = kittystore.get_store(settings, debug=False, auto_create=True)
         ml = FakeList("list@example.com")
         ml.subject_prefix = u"[example] "
         ml.archive_policy = ArchivePolicy.private

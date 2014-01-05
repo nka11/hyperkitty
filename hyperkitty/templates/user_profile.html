@@ -29,10 +29,7 @@
         {% csrf_token %}
         <table class="table table-bordered table-striped user-data">
             <tbody>
-                <tr>
-                    <th>{% trans 'User name:' %}</th>
-                    <td>{{ user.username}}</td>
-                </tr>
+                
                 {{ form.as_table }}
                 <tr>
                     <th>{% trans 'Email:' %}</th>
@@ -67,8 +64,8 @@
         </form>
 
         <div class="gravatar">
-            <a href="http://gravatar.com/">{% gravatar user.email 150 %}</a>
-            <p><a href="http://gravatar.com/">Edit on gravatar.com</a></p>
+            <a href="{{ gravatar_url }}">{% gravatar user.email 150 %}</a>
+            <p><a href="{{ gravatar_url }}">Edit on {{ gravatar_shortname }}</a></p>
         </div>
 
     <div class="clearfix"></div>

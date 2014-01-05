@@ -28,6 +28,7 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import redirect, render
 from django.core.urlresolvers import reverse
 from django.core.exceptions import SuspiciousOperation
+from django.core.cache import cache
 from django.template import RequestContext, loader
 from django.contrib.auth.decorators import login_required
 
@@ -88,6 +89,7 @@ def attachment(request, mlist_fqdn, message_id_hash, counter, filename):
             % urllib.quote(attachment.name.encode('utf-8'))
     return response
 
+
 @login_required
 @check_mlist_private
 def reply(request, mlist_fqdn, message_id_hash):
@@ -130,7 +132,7 @@ def reply(request, mlist_fqdn, message_id_hash):
     result = {"result": "The reply has been sent successfully.",
               "message_html": html}
     return HttpResponse(json.dumps(result),
-                        mimetype="application/javascript")
+                        content_type="application/javascript")
 
 
 @login_required

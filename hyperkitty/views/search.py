@@ -26,7 +26,6 @@ from django.http import Http404
 
 from hyperkitty.models import Tag
 from hyperkitty.lib import get_store
-from hyperkitty.lib.view_helpers import paginate
 from hyperkitty.lib.plugins import pluginRegistry
 
 
@@ -88,12 +87,12 @@ def search(request, page=1):
         if mlist is None:
             raise Http404("No archived mailing-list by that name.")
         if not is_mlist_authorized(request, mlist):
-            return render(request, "error-private.html", {
+            return render(request, "errors/private.html", {
                             "mlist": mlist,
                           }, status=403)
 
     if not store.search_index:
-        return render(request, "error-nosearch.html", {"mlist": mlist})
+        return render(request, "errors/nosearch.html", {"mlist": mlist})
 
     if not query:
         return render(request, "search_results.html", {
@@ -124,7 +123,7 @@ def search(request, page=1):
 
 
     paginator = SearchPaginator(messages, 10, total)
-    messages = paginate(messages, page_num, paginator=paginator)
+    #messages = paginate(messages, page_num, paginator=paginator)
 
     context = {
         'mlist' : mlist,
@@ -136,6 +135,3 @@ def search(request, page=1):
     for message in messages:
         pluginRegistry.message_view(request,message,context)
     return render(request, "search_results.html", context)
-
-
-
