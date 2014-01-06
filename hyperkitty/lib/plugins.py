@@ -36,7 +36,7 @@ class PluginRegistry():
     thread_templates = []
     overview_templates = []
     thread_indexes = [   "unread", "thread_id","email_id_hashes", "subject", "participants", "length", "date_active",
-             "category", 
+             "category", "list_name"
                 ]
     def __init__(self):
         self.urls = patterns('',url(r'plugins/','hyperkitty.lib.plugins.plugins_list'))

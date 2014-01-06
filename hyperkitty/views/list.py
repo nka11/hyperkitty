@@ -167,20 +167,15 @@ def overview(request, mlist_fqdn=None):
         thrd.subject = thread_obj.subject
         thrd.length = len(thread_obj)
         thrd.participants = thread_obj.participants
+        print repr(thrd.participants)
+        #print thrd.participants_count
         thrd.date_active = thread_obj.date_active.replace(tzinfo=utc)
         thrd.unread = is_thread_unread(request, mlist.name, thread_obj)
         thrd.list_name = mlist.name
         # XXX move to plugins
         thrd.category = get_category_widget(None, thread_obj.category)[0]
         pluginRegistry.thread_view(request, thrd, extra_context)
-        try:
-            # cleaned
-            del thrd.list_name
-            thread = Thread(**thrd.__dict__)
-        except Exception as e:
-            print pluginRegistry.thread_indexes
-            print thrd.__dict__
-            raise e
+        thread = Thread(**thrd.__dict__)
         # Statistics on how many participants and threads this month
         participants.update(thread.participants)
         threads.append(thread)
