@@ -17,7 +17,7 @@
 # HyperKitty.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Author: Aamir Khan <syst3m.w0rm@gmail.com>
-# 
+#
 
 import logging
 from urllib2 import HTTPError
@@ -90,7 +90,6 @@ def user_profile(request):
     if request.method == 'POST':
         form = UserProfileForm(request.POST)
         if form.is_valid():
-            #request.user.first_name = form.cleaned_data["first_name"]
             request.user.last_name = form.cleaned_data["display_name"]
             request.user.username = form.cleaned_data["username"]
             user_profile.timezone = form.cleaned_data["timezone"]
@@ -106,7 +105,6 @@ def user_profile(request):
     else:
         form = UserProfileForm(initial={
                 "username": request.user.username,
-#                "first_name": request.user.first_name,
                 "display_name": request.user.last_name,
                 "timezone": get_current_timezone(),
                 })
